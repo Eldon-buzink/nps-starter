@@ -12,6 +12,10 @@ from supabase import create_client, Client
 import openai
 from datetime import datetime, date
 
+# Import new modules
+from app.ingest import router as ingest_router
+from app.enrich import router as enrich_router
+
 # Load environment variables
 load_dotenv()
 
@@ -25,11 +29,15 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(ingest_router)
+app.include_router(enrich_router)
 
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL")

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { BarChart3, Upload, Settings, Home } from "lucide-react"
+import { BarChart3, Upload, Settings, Home, MessageSquare } from "lucide-react"
 
 export function Navigation() {
   return (
@@ -19,24 +19,18 @@ export function Navigation() {
               <Link href="/">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Home className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Button>
+              </Link>
+              <Link href="/(dashboard)/overview">
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4" />
                   <span>Overview</span>
                 </Button>
               </Link>
-              <Link href="/segments">
+              <Link href="/(dashboard)/responses">
                 <Button variant="ghost" className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Segments</span>
-                </Button>
-              </Link>
-              <Link href="/themes">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Themes</span>
-                </Button>
-              </Link>
-              <Link href="/responses">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
+                  <MessageSquare className="h-4 w-4" />
                   <span>Responses</span>
                 </Button>
               </Link>
