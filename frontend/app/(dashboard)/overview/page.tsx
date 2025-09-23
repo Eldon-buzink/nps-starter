@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useEffect } from 'react'
+import { Suspense } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, TrendingUp, Users, MessageSquare, BarChart3, Filter, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import WinnersLosers from '@/components/WinnersLosers'
+import { getTopTitleMoMMoves } from '@/lib/winners-losers'
 
 // Mock data - replace with actual API calls
 const mockData = {
@@ -44,14 +44,30 @@ const mockData = {
   ]
 }
 
-export default function OverviewPage() {
-  const [dateRange, setDateRange] = useState<{from: Date | undefined, to: Date | undefined}>({
-    from: undefined,
-    to: undefined
-  })
-  const [selectedSurvey, setSelectedSurvey] = useState<string>('all')
-  const [selectedTitle, setSelectedTitle] = useState<string>('all')
-  const [isLoading, setIsLoading] = useState(false)
+interface OverviewPageProps {
+  searchParams: {
+    start?: string;
+    end?: string;
+    survey?: string;
+    title?: string;
+  };
+}
+
+export default async function OverviewPage({ searchParams }: OverviewPageProps) {
+  // Get Winners/Losers data with error handling
+  let winnersLosersData = [];
+  try {
+    winnersLosersData = await getTopTitleMoMMoves({
+      start: searchParams.start ?? undefined,
+      end: searchParams.end ?? undefined,
+      survey: searchParams.survey ?? null,
+      minResponses: 30,
+      topK: 5,
+    });
+  } catch (error) {
+    console.error('Error fetching winners/losers data:', error);
+    // Use empty data as fallback
+  }
 
   const npsChange = mockData.kpis.currentNps - mockData.kpis.previousNps
   const npsChangePercent = ((npsChange / mockData.kpis.previousNps) * 100).toFixed(1)
@@ -74,98 +90,38 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateRange.from && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.from ? (
-                      dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "LLL dd, y")} -{" "}
-                          {format(dateRange.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(dateRange.from, "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
+      {/* Current Filters Display */}
+      {(searchParams.start || searchParams.end || searchParams.survey || searchParams.title) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Active Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {searchParams.start && (
+                <Badge variant="outline">
+                  From: {format(new Date(searchParams.start), "MMM dd, yyyy")}
+                </Badge>
+              )}
+              {searchParams.end && (
+                <Badge variant="outline">
+                  To: {format(new Date(searchParams.end), "MMM dd, yyyy")}
+                </Badge>
+              )}
+              {searchParams.survey && (
+                <Badge variant="outline">
+                  Survey: {searchParams.survey}
+                </Badge>
+              )}
+              {searchParams.title && (
+                <Badge variant="outline">
+                  Title: {searchParams.title}
+                </Badge>
+              )}
             </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Survey Type</label>
-              <Select value={selectedSurvey} onValueChange={setSelectedSurvey}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All surveys" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Surveys</SelectItem>
-                  <SelectItem value="LLT_Nieuws">LLT Nieuws</SelectItem>
-                  <SelectItem value="Customer_Service">Customer Service</SelectItem>
-                  <SelectItem value="Product_Feedback">Product Feedback</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Title</label>
-              <Select value={selectedTitle} onValueChange={setSelectedTitle}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All titles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Titles</SelectItem>
-                  <SelectItem value="Trouw">Trouw</SelectItem>
-                  <SelectItem value="Volkskrant">Volkskrant</SelectItem>
-                  <SelectItem value="NRC">NRC</SelectItem>
-                  <SelectItem value="AD">AD</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-end">
-              <Button 
-                onClick={() => setIsLoading(true)} 
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading ? "Loading..." : "Apply Filters"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -226,6 +182,11 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Winners/Losers */}
+      <Suspense fallback={<div>Loading winners/losers...</div>}>
+        <WinnersLosers data={winnersLosersData} minResponses={30} />
+      </Suspense>
 
       {/* Charts and Tables */}
       <Tabs defaultValue="trends" className="space-y-4">

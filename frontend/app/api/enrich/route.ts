@@ -1,0 +1,98 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { CLASSIFY_SYSTEM_NL, CLASSIFY_USER_TEMPLATE_NL } from "@/lib/npsTaxonomy";
+import { classifyNlStrictJSON, embed } from "@/lib/ai";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, // server only
+);
+
+function isEmptyComment(s?: string | null) {
+  if (!s) return true;
+  const t = s.trim().toLowerCase();
+  return t === "" || t === "n.v.t." || t === "nvt";
+}
+
+export async function POST() {
+  const BATCH = 75;
+  let processed = 0, skipped_no_comment = 0, failed = 0;
+
+  try {
+    // 1) fetch unenriched rows using a simple query
+    const { data: rows, error } = await supabaseAdmin
+      .from('nps_response')
+      .select(`
+        id,
+        survey_type,
+        nps_score,
+        title,
+        comment,
+        nps_ai_enrichment!left(id)
+      `)
+      .is('nps_ai_enrichment.id', null)
+      .not('comment', 'is', null)
+      .limit(BATCH);
+
+    if (error) {
+      console.error('Error fetching unenriched rows:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!rows?.length) {
+      return NextResponse.json({ processed, skipped_no_comment, failed });
+    }
+
+    for (const r of rows) {
+      try {
+        if (isEmptyComment(r.comment)) { 
+          skipped_no_comment++; 
+          continue; 
+        }
+
+        const user = CLASSIFY_USER_TEMPLATE_NL({
+          survey_type: r.survey_type,
+          nps_score: r.nps_score,
+          title: r.title,
+          comment: r.comment,
+        });
+
+        const json = await classifyNlStrictJSON(CLASSIFY_SYSTEM_NL, user);
+
+        const promoter_flag = r.nps_score >= 9;
+        const passive_flag = r.nps_score >= 7 && r.nps_score <= 8;
+        const detractor_flag = r.nps_score <= 6;
+
+        const vector = await embed(r.comment);
+
+        const insert = await supabaseAdmin.from("nps_ai_enrichment").insert({
+          response_id: r.id,
+          sentiment: json?.sentiment ?? null,
+          promoter_flag, 
+          passive_flag, 
+          detractor_flag,
+          themes: json?.themes ?? ["overige"],
+          theme_scores: json?.theme_scores ?? {},
+          extracted_keywords: json?.keywords ?? [],
+          language: "nl",
+          embedded_vector: vector,
+        });
+
+        if (insert.error) { 
+          console.error('Error inserting enrichment:', insert.error);
+          failed++; 
+          continue; 
+        }
+        processed++;
+      } catch (e) {
+        console.error('Error processing row:', e);
+        failed++;
+      }
+    }
+
+    return NextResponse.json({ processed, skipped_no_comment, failed });
+  } catch (error) {
+    console.error('Enrichment API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

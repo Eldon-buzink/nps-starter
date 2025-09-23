@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Users, MessageSquare, BarChart3, Upload, AlertCircle } from "lucide-react"
+import { UploadDialog } from "@/components/UploadDialog"
 
 export function Dashboard() {
   // Mock data for demonstration
@@ -26,10 +27,7 @@ export function Dashboard() {
             Monitor and analyze your Net Promoter Score insights
           </p>
         </div>
-        <Button className="flex items-center space-x-2">
-          <Upload className="h-4 w-4" />
-          <span>Upload New Data</span>
-        </Button>
+            <UploadDialog />
       </div>
 
       {/* Key Metrics */}
@@ -191,10 +189,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload CSV Data
-              </Button>
+                  <div className="w-full">
+                    <UploadDialog />
+                  </div>
               <Button className="w-full justify-start" variant="outline">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Generate Report

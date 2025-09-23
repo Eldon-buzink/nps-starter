@@ -1,0 +1,11 @@
+SURVEY,NPS,NPS_TOELICHTING,GESLACHT,LEEFTIJD,ABOJAREN,CREATIE_DT,SUBSCRIPTION_KEY,TITEL_TEKST,ABO_TYPE,ELT_PROEF_GEHAD,EXIT_OPZEGREDEN
+Q1 2024,9,"Geweldige service, zeer tevreden!",V,35-44,2-5 jaar,01/01/2024,SUB123,De Telegraaf,Digitaal,Ja,
+Q1 2024,7,"Goed maar kan beter",M,25-34,1-2 jaar,02/01/2024,SUB124,Het Parool,Print+Digitaal,Nee,
+Q1 2024,4,"Te duur voor wat je krijgt",V,45-54,5+ jaar,03/01/2024,SUB125,Volkskrant,Digitaal,Nee,Prijs
+Q1 2024,10,"Perfect! Aanrader!",M,18-24,0-1 jaar,04/01/2024,SUB126,AD,Digitaal,Ja,
+Q1 2024,6,"Bezorging is traag",V,55-64,2-5 jaar,05/01/2024,SUB127,De Telegraaf,Print+Digitaal,Nee,Bezorging
+Q1 2024,8,"Content is interessant",M,35-44,1-2 jaar,06/01/2024,SUB128,Het Parool,Digitaal,Ja,
+Q1 2024,3,"App werkt niet goed",V,25-34,0-1 jaar,07/01/2024,SUB129,Volkskrant,Digitaal,Nee,Techniek
+Q1 2024,9,"Zeer goede kwaliteit",M,45-54,5+ jaar,08/01/2024,SUB130,AD,Print+Digitaal,Nee,
+Q1 2024,5,"Te weinig variatie",V,35-44,2-5 jaar,09/01/2024,SUB131,De Telegraaf,Digitaal,Nee,Content
+Q1 2024,8,"Klantenservice is vriendelijk",M,55-64,1-2 jaar,10/01/2024,SUB132,Het Parool,Print+Digitaal,Ja,

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { BarChart3, Upload, Settings, Home, MessageSquare } from "lucide-react"
+import { BarChart3, Upload, Settings, Home, MessageSquare, Tag, TrendingUp } from "lucide-react"
 
 export function Navigation() {
   return (
@@ -22,25 +22,33 @@ export function Navigation() {
                   <span>Dashboard</span>
                 </Button>
               </Link>
-              <Link href="/(dashboard)/overview">
+              <Link href="/overview">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <BarChart3 className="h-4 w-4" />
                   <span>Overview</span>
                 </Button>
               </Link>
-              <Link href="/(dashboard)/responses">
+              <Link href="/responses">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4" />
                   <span>Responses</span>
                 </Button>
               </Link>
+              <Link href="/themes">
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <Tag className="h-4 w-4" />
+                  <span>Themes</span>
+                </Button>
+              </Link>
+              <Link href="/trends">
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Trends</span>
+                </Button>
+              </Link>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" className="flex items-center space-x-2">
-              <Upload className="h-4 w-4" />
-              <span>Upload Data</span>
-            </Button>
             <Button variant="ghost" size="icon">
               <Settings className="h-4 w-4" />
             </Button>

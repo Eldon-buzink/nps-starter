@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { 
   Search, 
   Filter, 
@@ -23,6 +24,8 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import AiExplainer from '@/components/AiExplainer'
+import { getSimilarToResponse } from '@/lib/trends'
 
 // Mock data - replace with actual API calls
 const mockResponses = [
@@ -33,7 +36,7 @@ const mockResponses = [
     survey_type: 'LLT_Nieuws',
     nps_score: 9,
     nps_category: 'promoter',
-    themes: ['Klantenservice', 'Productkwaliteit'],
+    themes: ['klantenservice', 'content_kwaliteit'],
     sentiment: 0.8,
     sentiment_label: 'positive',
     comment: 'Geweldige service, zeer tevreden met de kwaliteit van de krant. De artikelen zijn altijd interessant en goed geschreven.',
@@ -49,7 +52,7 @@ const mockResponses = [
     survey_type: 'LLT_Nieuws',
     nps_score: 4,
     nps_category: 'detractor',
-    themes: ['Prijs/Value', 'Technische problemen'],
+    themes: ['pricing', 'app_ux'],
     sentiment: -0.3,
     sentiment_label: 'negative',
     comment: 'Te duur voor wat je krijgt. Ook veel technische problemen met de app.',
@@ -65,7 +68,7 @@ const mockResponses = [
     survey_type: 'LLT_Nieuws',
     nps_score: 7,
     nps_category: 'passive',
-    themes: ['Gebruiksvriendelijkheid'],
+    themes: ['app_ux'],
     sentiment: 0.2,
     sentiment_label: 'neutral',
     comment: 'Redelijk tevreden, interface kan wel wat gebruiksvriendelijker.',
@@ -90,6 +93,8 @@ export default function ResponsesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedResponse, setSelectedResponse] = useState<any>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [similarResponses, setSimilarResponses] = useState<any[]>([])
+  const [loadingSimilar, setLoadingSimilar] = useState(false)
   const itemsPerPage = 10
 
   // Filter responses based on current filters
@@ -160,12 +165,25 @@ export default function ResponsesPage() {
     return 'secondary'
   }
 
-  const openResponseDrawer = (response: any) => {
+  const openResponseDrawer = async (response: any) => {
     setSelectedResponse(response)
     setIsDrawerOpen(true)
+    
+    // Load similar responses
+    setLoadingSimilar(true)
+    try {
+      const similar = await getSimilarToResponse(response.id, 5)
+      setSimilarResponses(similar)
+    } catch (error) {
+      console.error('Error loading similar responses:', error)
+      setSimilarResponses([])
+    } finally {
+      setLoadingSimilar(false)
+    }
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -182,6 +200,9 @@ export default function ResponsesPage() {
           </Button>
         </div>
       </div>
+
+      {/* AI Explainer */}
+      <AiExplainer compact />
 
       {/* Filters */}
       <Card>
@@ -346,15 +367,22 @@ export default function ResponsesPage() {
                     <td className="p-4 text-sm font-medium">{response.title}</td>
                     <td className="p-4 text-sm">{response.survey_type}</td>
                     <td className="p-4">
-                      <Badge variant={getNpsBadgeVariant(response.nps_score)}>
-                        {response.nps_score} - {getNpsBadgeText(response.nps_score)}
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant={getNpsBadgeVariant(response.nps_score)}>
+                            {response.nps_score} - {getNpsBadgeText(response.nps_score)}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Promoters (9–10), Passives (7–8), Detractors (0–6). Deze indeling is de standaard NPS-methode.</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1">
                         {response.themes.slice(0, 2).map((theme: string, index: number) => (
                           <Badge key={index} variant="outline" className="text-xs">
-                            {theme}
+                            {theme.replace('_', ' ')}
                           </Badge>
                         ))}
                         {response.themes.length > 2 && (
@@ -365,12 +393,19 @@ export default function ResponsesPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        {getSentimentIcon(response.sentiment)}
-                        <Badge variant={getSentimentBadgeVariant(response.sentiment)}>
-                          {response.sentiment_label}
-                        </Badge>
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2">
+                            {getSentimentIcon(response.sentiment)}
+                            <span className="text-sm font-mono">
+                              {response.sentiment?.toFixed(2) ?? "—"}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>AI schat per opmerking hoe positief/negatief de toon is (-1..1). Dit staat los van de NPS-score.</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                     <td className="p-4 max-w-xs">
                       <p className="text-sm line-clamp-2 text-muted-foreground">
@@ -463,14 +498,29 @@ export default function ResponsesPage() {
                   </div>
                   
                   <div>
-                    <h3 className="font-medium mb-2">Similar Comments</h3>
-                    <div className="space-y-2">
-                      {selectedResponse.similar_comments.map((comment: string, index: number) => (
-                        <p key={index} className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                          {comment}
-                        </p>
-                      ))}
-                    </div>
+                    <h3 className="font-medium mb-2">Similar Responses</h3>
+                    {loadingSimilar ? (
+                      <div className="text-sm text-muted-foreground">Loading similar responses...</div>
+                    ) : similarResponses.length > 0 ? (
+                      <div className="space-y-2">
+                        {similarResponses.map((similar, index) => (
+                          <div key={index} className="text-sm bg-muted/50 p-3 rounded-lg">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-medium">{similar.title}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round(similar.similarity * 100)}% similar
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground text-xs mb-1">
+                              NPS: {similar.nps_score} | {format(new Date(similar.created_at), 'MMM dd, yyyy')}
+                            </p>
+                            <p className="text-xs line-clamp-2">{similar.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No similar responses found</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -479,5 +529,6 @@ export default function ResponsesPage() {
         </DrawerContent>
       </Drawer>
     </div>
+    </TooltipProvider>
   )
 }
