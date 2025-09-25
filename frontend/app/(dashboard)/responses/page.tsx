@@ -26,62 +26,22 @@ import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import AiExplainer from '@/components/AiExplainer'
 import { getSimilarToResponse } from '@/lib/trends'
+import { getRecentResponses } from '@/lib/data'
+import { createClient } from '@supabase/supabase-js'
 
-// Mock data - replace with actual API calls
-const mockResponses = [
-  {
-    id: '1',
-    created_at: '2025-09-22T08:59:17Z',
-    title: 'Trouw',
-    survey_type: 'LLT_Nieuws',
-    nps_score: 9,
-    nps_category: 'promoter',
-    themes: ['klantenservice', 'content_kwaliteit'],
-    sentiment: 0.8,
-    sentiment_label: 'positive',
-    comment: 'Geweldige service, zeer tevreden met de kwaliteit van de krant. De artikelen zijn altijd interessant en goed geschreven.',
-    similar_comments: [
-      'Uitstekende journalistiek, lees graag Trouw',
-      'Goede krant met betrouwbare informatie'
-    ]
-  },
-  {
-    id: '2',
-    created_at: '2025-09-21T14:30:22Z',
-    title: 'Volkskrant',
-    survey_type: 'LLT_Nieuws',
-    nps_score: 4,
-    nps_category: 'detractor',
-    themes: ['pricing', 'app_ux'],
-    sentiment: -0.3,
-    sentiment_label: 'negative',
-    comment: 'Te duur voor wat je krijgt. Ook veel technische problemen met de app.',
-    similar_comments: [
-      'Prijs is te hoog voor de kwaliteit',
-      'App werkt niet goed op mijn telefoon'
-    ]
-  },
-  {
-    id: '3',
-    created_at: '2025-09-20T16:45:10Z',
-    title: 'NRC',
-    survey_type: 'LLT_Nieuws',
-    nps_score: 7,
-    nps_category: 'passive',
-    themes: ['app_ux'],
-    sentiment: 0.2,
-    sentiment_label: 'neutral',
-    comment: 'Redelijk tevreden, interface kan wel wat gebruiksvriendelijker.',
-    similar_comments: [
-      'Goed product maar interface kan beter',
-      'Tevreden maar er is ruimte voor verbetering'
-    ]
-  }
-]
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// Mock data for themes and sentiment (until AI enrichment is implemented)
+const mockThemes = ['klantenservice', 'content_kwaliteit', 'bezorging', 'pricing', 'app_ux']
+const mockSentiments = [0.8, 0.2, -0.3, 0.6, -0.1, 0.9, -0.5, 0.4, -0.2, 0.7]
 
 export default function ResponsesPage() {
-  const [responses, setResponses] = useState(mockResponses)
-  const [filteredResponses, setFilteredResponses] = useState(mockResponses)
+  const [responses, setResponses] = useState<any[]>([])
+  const [filteredResponses, setFilteredResponses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSurvey, setSelectedSurvey] = useState('all')
   const [selectedTitle, setSelectedTitle] = useState('all')
@@ -95,7 +55,76 @@ export default function ResponsesPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [similarResponses, setSimilarResponses] = useState<any[]>([])
   const [loadingSimilar, setLoadingSimilar] = useState(false)
+  const [availableSurveys, setAvailableSurveys] = useState<string[]>([])
+  const [availableTitles, setAvailableTitles] = useState<string[]>([])
   const itemsPerPage = 10
+
+  // Fetch real data on component mount
+  useEffect(() => {
+    async function fetchResponses() {
+      try {
+        setLoading(true)
+        const data = await getRecentResponses(100) // Get 100 most recent responses
+        
+        // Try to get AI enrichment data for these responses
+        const responseIds = data.map(r => r.id)
+        const { data: enrichmentData } = await supabase
+          .from('nps_ai_enrichment')
+          .select('response_id, themes, sentiment_score, sentiment_label, keywords')
+          .in('response_id', responseIds)
+        
+        // Create a map of enrichment data by response ID
+        const enrichmentMap = new Map()
+        if (enrichmentData) {
+          enrichmentData.forEach(enrichment => {
+            enrichmentMap.set(enrichment.response_id, enrichment)
+          })
+        }
+        
+        // Combine response data with AI enrichment data
+        const enrichedData = data.map((response, index) => {
+          const enrichment = enrichmentMap.get(response.id)
+          
+          if (enrichment) {
+            // Use real AI enrichment data
+            return {
+              ...response,
+              themes: enrichment.themes || [],
+              sentiment: enrichment.sentiment_score || 0,
+              sentiment_label: enrichment.sentiment_label || 'neutral',
+              keywords: enrichment.keywords || [],
+              similar_comments: [] // Will be populated when user clicks on a response
+            }
+          } else {
+            // Fall back to mock data for responses without AI enrichment
+            return {
+              ...response,
+              themes: [mockThemes[index % mockThemes.length]],
+              sentiment: mockSentiments[index % mockSentiments.length],
+              sentiment_label: mockSentiments[index % mockSentiments.length] > 0.3 ? 'positive' : 
+                              mockSentiments[index % mockSentiments.length] < -0.3 ? 'negative' : 'neutral',
+              keywords: [],
+              similar_comments: [] // Will be populated when user clicks on a response
+            }
+          }
+        })
+        
+            setResponses(enrichedData)
+            
+            // Extract unique surveys and titles for filter options
+            const uniqueSurveys = [...new Set(data.map(r => r.survey_name).filter(Boolean))]
+            const uniqueTitles = [...new Set(data.map(r => r.title_text).filter(Boolean))]
+            setAvailableSurveys(uniqueSurveys)
+            setAvailableTitles(uniqueTitles)
+          } catch (error) {
+            console.error('Error fetching responses:', error)
+          } finally {
+            setLoading(false)
+          }
+        }
+        
+        fetchResponses()
+      }, [])
 
   // Filter responses based on current filters
   useEffect(() => {
@@ -104,20 +133,20 @@ export default function ResponsesPage() {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(response => 
-        response.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        response.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        response.survey_type.toLowerCase().includes(searchTerm.toLowerCase())
+        response.nps_explanation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        response.title_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        response.survey_name?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
     // Survey filter
     if (selectedSurvey !== 'all') {
-      filtered = filtered.filter(response => response.survey_type === selectedSurvey)
+      filtered = filtered.filter(response => response.survey_name === selectedSurvey)
     }
 
     // Title filter
     if (selectedTitle !== 'all') {
-      filtered = filtered.filter(response => response.title === selectedTitle)
+      filtered = filtered.filter(response => response.title_text === selectedTitle)
     }
 
     // NPS bucket filter
@@ -182,6 +211,32 @@ export default function ResponsesPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">NPS Responses</h1>
+            <p className="text-muted-foreground">Loading responses...</p>
+          </div>
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-3 w-2/3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider>
     <div className="space-y-6">
@@ -235,8 +290,11 @@ export default function ResponsesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Surveys</SelectItem>
-                  <SelectItem value="LLT_Nieuws">LLT Nieuws</SelectItem>
-                  <SelectItem value="Customer_Service">Customer Service</SelectItem>
+                  {availableSurveys.map((survey) => (
+                    <SelectItem key={survey} value={survey}>
+                      {survey}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -249,9 +307,11 @@ export default function ResponsesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Titles</SelectItem>
-                  <SelectItem value="Trouw">Trouw</SelectItem>
-                  <SelectItem value="Volkskrant">Volkskrant</SelectItem>
-                  <SelectItem value="NRC">NRC</SelectItem>
+                  {availableTitles.map((title) => (
+                    <SelectItem key={title} value={title}>
+                      {title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -1,390 +1,291 @@
-"""
-Enhanced data ingestion endpoint for NPS data
-Handles CSV/XLSX files with robust parsing and normalization
-"""
+from __future__ import annotations
+
+import csv
+import io
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-import io
-import json
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
-import re
-from supabase import create_client, Client
-import os
+from supabase import Client, create_client
+from dotenv import load_dotenv
 
-router = APIRouter(prefix="/ingest", tags=["ingestion"])
+# Load environment variables
+load_dotenv()
 
-# Initialize Supabase client
-def get_supabase_client() -> Client:
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    if not url or not key:
-        raise HTTPException(status_code=500, detail="Supabase configuration missing")
-    return create_client(url, key)
+# -----------------------------------------------------------------------------
+# Supabase
+# -----------------------------------------------------------------------------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
 
-class IngestResponse(BaseModel):
+sb: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+router = APIRouter(prefix="/ingest", tags=["ingest"])
+
+# -----------------------------------------------------------------------------
+# Columns (case-insensitive mapping)
+# -----------------------------------------------------------------------------
+REQUIRED_HEADERS = {"SURVEY", "NPS", "CREATIE_DT"}
+OPTIONAL_HEADERS = {
+    "NPS_TOELICHTING",
+    "GESLACHT",
+    "LEEFTIJD",
+    "ABOJAREN",
+    "SUBSCRIPTION_KEY",
+    "TITEL_TEKST",
+    "TITEL",
+    "ABO_TYPE",
+    "ELT_PROEF_GEHAD",
+    "EXIT_OPZEGREDEN",
+}
+ALL_HEADERS = REQUIRED_HEADERS | OPTIONAL_HEADERS
+
+# -----------------------------------------------------------------------------
+# Models
+# -----------------------------------------------------------------------------
+class IngestResult(BaseModel):
     inserted: int
     skipped: int
-    errors: int
-    error_details: List[str] = []
+    raw_saved: int
+    errors: List[str]
 
-def normalize_headers(headers: List[str]) -> Dict[str, str]:
-    """Normalize headers case-insensitively and map to standard names"""
-    header_mapping = {
-        'survey': 'survey_type',
-        'nps': 'nps_score', 
-        'nps_toelichting': 'comment',
-        'geslacht': 'gender',
-        'leeftijd': 'age_band',
-        'abojaren': 'tenure',
-        'creatie_dt': 'created_at',
-        'subscription_key': 'subscription_key',
-        'titel_tekst': 'title',
-        'titel': 'title',
-        'abo_type': 'subscription_type',
-        'elt_proef_gehad': 'had_trial',
-        'exit_opzegreden': 'exit_reason'
-    }
-    
-    normalized = {}
-    for header in headers:
-        # Clean and normalize header
-        clean_header = header.strip().lower().replace(' ', '_')
-        if clean_header in header_mapping:
-            normalized[header] = header_mapping[clean_header]
-        else:
-            normalized[header] = clean_header
-    
-    return normalized
-
-def parse_date(date_str: str) -> Optional[str]:
-    """Parse various date formats and return ISO date string"""
-    if not date_str or pd.isna(date_str):
-        return None
-    
-    date_str = str(date_str).strip()
-    if not date_str:
-        return None
-    
-    # Common date formats to try
-    date_formats = [
-        '%d/%m/%Y',    # dd/mm/yyyy
-        '%d/%m/%y',    # dd/mm/yy
-        '%d-%m-%Y',    # dd-mm-yyyy
-        '%d-%m-%y',    # dd-mm-yy
-        '%m/%d/%Y',    # mm/dd/yyyy
-        '%m/%d/%y',    # mm/dd/yy
-        '%Y-%m-%d',    # yyyy-mm-dd
-        '%d.%m.%Y',    # dd.mm.yyyy
-        '%d.%m.%y',    # dd.mm.yy
-    ]
-    
-    for fmt in date_formats:
-        try:
-            parsed_date = datetime.strptime(date_str, fmt)
-            return parsed_date.strftime('%Y-%m-%d')
-        except ValueError:
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+def normalize_headers(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a new dict with UPPERCASE headers stripped of spaces."""
+    out: Dict[str, Any] = {}
+    for k, v in row.items():
+        if k is None:
             continue
-    
+        kk = str(k).strip().upper()
+        out[kk] = v
+    return out
+
+def try_parse_date(val: Any) -> Optional[datetime.date]:
+    """Parse dates like dd/mm/yyyy, d/m/yyyy, m/d/yyyy, yyyy-mm-dd, mm/dd/yyyy, excel serials."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return None
+
+    # Already a pandas/py datetime?
+    if isinstance(val, (datetime, pd.Timestamp)):
+        return val.date()
+
+    s = str(val).strip()
+    if not s:
+        return None
+
+    # Excel serial date
+    if isinstance(val, (int, float)) and not isinstance(val, bool):
+        try:
+            return (pd.Timestamp("1899-12-30") + pd.to_timedelta(int(val), unit="D")).date()
+        except Exception:
+            pass
+
+    # Try common formats
+    fmts = [
+        "%d/%m/%Y", "%-d/%-m/%Y",   # EU
+        "%m/%d/%Y", "%-m/%-d/%Y",   # US
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%d.%m.%Y",
+    ]
+    for f in fmts:
+        try:
+            return datetime.strptime(s, f).date()
+        except Exception:
+            continue
+
+    # Pandas fallback
+    try:
+        return pd.to_datetime(s, dayfirst=True, errors="coerce").date()
+    except Exception:
+        return None
+
+def to_bool_ja_nee(val: Any) -> Optional[bool]:
+    if val is None:
+        return None
+    s = str(val).strip().lower()
+    if s in {"ja", "yes", "true", "1"}:
+        return True
+    if s in {"nee", "no", "false", "0"}:
+        return False
     return None
 
-def normalize_comment(comment: str) -> Optional[str]:
-    """Normalize comment field, treating empty values as None"""
-    if not comment or pd.isna(comment):
+def clean_comment(val: Any) -> Optional[str]:
+    if val is None:
         return None
-    
-    comment = str(comment).strip()
-    if comment.lower() in ['', 'n.v.t.', 'nvt', 'n/a', 'na', 'none']:
+    s = str(val).strip()
+    low = s.lower()
+    if low in {"", "n.v.t.", "nvt"}:
         return None
-    
-    return comment
+    return s
 
-def detect_file_type(filename: str, content: bytes) -> str:
-    """Detect file type by filename and magic bytes"""
-    filename_lower = filename.lower()
-    
-    if filename_lower.endswith('.xlsx'):
-        return 'xlsx'
-    elif filename_lower.endswith('.xls'):
-        return 'xls'
-    elif filename_lower.endswith('.csv'):
-        return 'csv'
-    
-    # Check magic bytes
-    if content.startswith(b'PK\x03\x04'):
-        return 'xlsx'
-    elif content.startswith(b'\xd0\xcf\x11\xe0'):
-        return 'xls'
-    else:
-        # Assume CSV if we can't determine
-        return 'csv'
-
-def parse_csv_content(content: bytes, delimiter: str = None) -> pd.DataFrame:
-    """Parse CSV content with automatic delimiter detection"""
-    # Try to detect delimiter
-    if delimiter is None:
-        sample = content[:1024].decode('utf-8', errors='ignore')
-        # Try common delimiters
-        delimiters = [',', ';', '\t', '|']
-        delimiter = ','
-        for delim in delimiters:
-            if delim in sample:
-                delimiter = delim
-                break
-    
-    # Try different encodings
-    encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-    df = None
-    
-    for encoding in encodings:
-        try:
-            df = pd.read_csv(
-                io.StringIO(content.decode(encoding)),
-                delimiter=delimiter,
-                dtype=str,  # Read all as strings initially
-                na_filter=False  # Don't convert to NaN
-            )
-            break
-        except UnicodeDecodeError:
-            continue
-    
-    if df is None:
-        raise ValueError("Could not decode file with any supported encoding")
-    
-    return df
-
-def parse_excel_content(content: bytes) -> pd.DataFrame:
-    """Parse Excel content"""
+def nps_int(val: Any) -> Optional[int]:
+    if val is None:
+        return None
     try:
-        df = pd.read_excel(io.BytesIO(content), dtype=str, na_filter=False)
-        return df
-    except Exception as e:
-        raise ValueError(f"Could not parse Excel file: {str(e)}")
+        n = int(float(val))
+        if 0 <= n <= 10:
+            return n
+        return None
+    except Exception:
+        return None
 
-def normalize_row(row: pd.Series, header_mapping: Dict[str, str]) -> Dict[str, Any]:
-    """Normalize a single row of data"""
-    normalized = {}
-    
-    for original_header, value in row.items():
-        if original_header in header_mapping:
-            standard_name = header_mapping[original_header]
-            
-            # Handle different field types
-            if standard_name == 'nps_score':
-                try:
-                    normalized[standard_name] = int(float(str(value))) if str(value).strip() else None
-                except (ValueError, TypeError):
-                    normalized[standard_name] = None
-            elif standard_name == 'created_at':
-                normalized[standard_name] = parse_date(str(value))
-            elif standard_name == 'comment':
-                normalized[standard_name] = normalize_comment(str(value))
-            elif standard_name in ['had_trial', 'subscription_key']:
-                # Boolean or key fields
-                val = str(value).strip().lower()
-                if val in ['true', '1', 'yes', 'ja', 'j']:
-                    normalized[standard_name] = True
-                elif val in ['false', '0', 'no', 'nee', 'n']:
-                    normalized[standard_name] = False
-                else:
-                    normalized[standard_name] = val if val else None
-            else:
-                # String fields
-                normalized[standard_name] = str(value).strip() if str(value).strip() else None
-        else:
-            # Keep original field name for raw data
-            normalized[original_header] = str(value).strip() if str(value).strip() else None
-    
-    return normalized
+def detect_filetype(filename: str) -> str:
+    lower = filename.lower()
+    if lower.endswith(".xlsx"):
+        return "xlsx"
+    if lower.endswith(".csv"):
+        return "csv"
+    # Best-effort default
+    return "csv"
 
-@router.post("/", response_model=IngestResponse)
-async def ingest_data(file: UploadFile = File(...)):
-    """
-    Enhanced data ingestion endpoint
-    Accepts CSV/XLSX files and normalizes them into the database
-    """
-    import uuid
-    upload_id = str(uuid.uuid4())
-    upload_progress[upload_id] = {"status": "processing", "progress": 0, "message": "Starting upload..."}
-    
+def read_csv_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
+    sample = file_bytes[:4096].decode("utf-8", errors="ignore")
     try:
-        # Read file content
-        content = await file.read()
-        
-        # Detect file type
-        file_type = detect_file_type(file.filename, content)
-        
-        # Parse file based on type
-        if file_type in ['xlsx', 'xls']:
-            df = parse_excel_content(content)
+        dialect = csv.Sniffer().sniff(sample)
+        delimiter = dialect.delimiter
+    except Exception:
+        # common fallbacks
+        delimiter = ";" if sample.count(";") > sample.count(",") else ","
+    text = file_bytes.decode("utf-8", errors="ignore")
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
+    return [dict(row) for row in reader]
+
+def read_xlsx_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
+    df = pd.read_excel(io.BytesIO(file_bytes))
+    df.columns = [str(c).strip() for c in df.columns]
+    return df.to_dict(orient="records")
+
+def normalize_row(row: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """
+    Map incoming headers to our schema.
+    Returns (normalized, error_message_if_any)
+    """
+    r = normalize_headers(row)
+
+    # Required
+    survey_type = r.get("SURVEY")
+    score = nps_int(r.get("NPS"))
+    created = try_parse_date(r.get("CREATIE_DT"))
+
+    if not survey_type:
+        return None, "Missing SURVEY"
+    if score is None:
+        return None, f"Invalid NPS: {r.get('NPS')}"
+    if created is None:
+        return None, f"Invalid CREATIE_DT: {r.get('CREATIE_DT')}"
+
+    # Title can be TITEL_TEKST or TITEL
+    title = r.get("TITEL_TEKST") or r.get("TITEL")
+    comment = clean_comment(r.get("NPS_TOELICHTING"))
+
+    normalized = {
+        # nps_response columns
+        "survey_name": str(survey_type).strip(),
+        "nps_score": score,
+        "nps_explanation": comment,
+        "gender": (r.get("GESLACHT") or None),
+        "age_range": (r.get("LEEFTIJD") or None),
+        "years_employed": (r.get("ABOJAREN") or None),
+        "creation_date": created.isoformat(),  # API accepts ISO date
+        "title_text": (title or None),
+        "nps_category": "promoter" if score >= 9 else ("passive" if score >= 7 else "detractor"),
+    }
+    return normalized, None
+
+def chunked(seq: List[Dict[str, Any]], size: int) -> List[List[Dict[str, Any]]]:
+    return [seq[i : i + size] for i in range(0, len(seq), size)]
+
+# -----------------------------------------------------------------------------
+# Endpoint
+# -----------------------------------------------------------------------------
+@router.post("", response_model=IngestResult)
+async def ingest_data(file: UploadFile = File(...)) -> IngestResult:
+    """
+    Accept CSV/XLSX upload, parse, normalize, and batch-insert into:
+      - nps_raw (original row as JSON)
+      - nps_response (normalized)
+    Returns counts and errors.
+    """
+    try:
+        filename = file.filename or "upload.csv"
+        filetype = detect_filetype(filename)
+        raw_bytes = await file.read()
+
+        # Read rows
+        if filetype == "xlsx":
+            rows = read_xlsx_bytes(raw_bytes)
         else:
-            df = parse_csv_content(content)
-        
-        if df.empty:
-            raise HTTPException(status_code=400, detail="File is empty or could not be parsed")
-        
-        # Normalize headers
-        print(f"DEBUG: Original headers: {df.columns.tolist()}")
-        header_mapping = normalize_headers(df.columns.tolist())
-        print(f"DEBUG: Header mapping: {header_mapping}")
-        print(f"DEBUG: DataFrame shape: {df.shape}")
-        print(f"DEBUG: First few rows:\n{df.head()}")
-        upload_progress[upload_id] = {"status": "processing", "progress": 10, "message": "Processing file structure..."}
-        
-        # Process rows in batches for better performance
+            rows = read_csv_bytes(raw_bytes)
+
+        if not rows:
+            raise HTTPException(status_code=400, detail="No rows found in file")
+
+        normalized_rows: List[Dict[str, Any]] = []
+        errors: List[str] = []
+        for idx, row in enumerate(rows, start=1):
+            norm, err = normalize_row(row)
+            if err:
+                errors.append(f"Row {idx}: {err}")
+                continue
+            # Keep a copy of the original for nps_raw
+            normalized_rows.append({"_norm": norm, "_raw": normalize_headers(row)})
+
+        if not normalized_rows:
+            return IngestResult(inserted=0, skipped=len(rows), raw_saved=0, errors=errors)
+
+        # Batch insert
+        BATCH = 500
         inserted = 0
-        skipped = 0
-        errors = 0
-        error_details = []
-        batch_size = 100  # Increased batch size for better performance
-        batch_data = []
-        total_rows = len(df)
-        
-        for index, row in df.iterrows():
-            try:
-                # Normalize row data
-                normalized_row = normalize_row(row, header_mapping)
-                
-                # Validate required fields
-                print(f"DEBUG: Row {index + 1}: survey_type={normalized_row.get('survey_type')}, nps_score={normalized_row.get('nps_score')}")
-                if not normalized_row.get('survey_type') or not normalized_row.get('nps_score'):
-                    skipped += 1
-                    error_details.append(f"Row {index + 1}: Missing required fields (survey_type or nps_score)")
-                    print(f"DEBUG: Skipping row {index + 1} - missing required fields")
-                    continue
-                
-                # Validate NPS score
-                nps_score = normalized_row.get('nps_score')
-                if nps_score is None or not (0 <= nps_score <= 10):
-                    skipped += 1
-                    error_details.append(f"Row {index + 1}: Invalid NPS score: {nps_score}")
-                    continue
-                
-                # Add to batch for processing
-                batch_data.append({
-                    'index': index,
-                    'normalized_row': normalized_row,
-                    'nps_score': nps_score
+        raw_saved = 0
+        skipped = len(rows) - len(normalized_rows)
+
+        # Insert raw first, then normalized (matching counts by order)
+        for batch in chunked(normalized_rows, BATCH):
+            raw_payload = []
+            for r in batch:
+                norm = r["_norm"]
+                raw_payload.append({
+                    "survey_name": norm["survey_name"],
+                    "nps_score": norm["nps_score"],
+                    "nps_explanation": norm["nps_explanation"],
+                    "gender": norm["gender"],
+                    "age_range": norm["age_range"],
+                    "years_employed": norm["years_employed"],
+                    "creation_date": norm["creation_date"],
+                    "title_text": norm["title_text"],
+                    "raw_data": r["_raw"]
                 })
-                
-                # Process batch when it reaches batch_size or at the end
-                if len(batch_data) >= batch_size or index == len(df) - 1:
-                    # Update progress
-                    progress_pct = min(20 + int((index / total_rows) * 70), 90)
-                    upload_progress[upload_id] = {
-                        "status": "processing", 
-                        "progress": progress_pct, 
-                        "message": f"Processing batch {index + 1} of {total_rows} rows..."
-                    }
-                    
-                    try:
-                        supabase = get_supabase_client()
-                        
-                        # Prepare batch data
-                        raw_batch = []
-                        response_batch = []
-                        
-                        for batch_item in batch_data:
-                            normalized_row = batch_item['normalized_row']
-                            nps_score = batch_item['nps_score']
-                            
-                            raw_batch.append({
-                                'survey_name': normalized_row.get('survey_type'),
-                                'nps_score': normalized_row.get('nps_score'),
-                                'nps_explanation': normalized_row.get('comment'),
-                                'gender': normalized_row.get('gender'),
-                                'age_range': normalized_row.get('age_band'),
-                                'years_employed': normalized_row.get('tenure'),
-                                'creation_date': normalized_row.get('created_at'),
-                                'title_text': normalized_row.get('title'),
-                                'raw_data': json.dumps(normalized_row)
-                            })
-                        
-                        # Batch insert raw data
-                        print(f"DEBUG: About to insert {len(raw_batch)} raw records")
-                        if raw_batch:
-                            try:
-                                raw_result = supabase.table('nps_raw').insert(raw_batch).execute()
-                                print(f"DEBUG: Raw insert result: {raw_result.data}")
-                                
-                                if raw_result.data:
-                                    # Prepare response batch
-                                    for i, raw_item in enumerate(raw_result.data):
-                                        batch_item = batch_data[i]
-                                        normalized_row = batch_item['normalized_row']
-                                        nps_score = batch_item['nps_score']
-                                        
-                                        response_batch.append({
-                                            'raw_id': raw_item['id'],
-                                            'survey_name': normalized_row.get('survey_type'),
-                                            'nps_score': normalized_row.get('nps_score'),
-                                            'nps_explanation': normalized_row.get('comment'),
-                                            'gender': normalized_row.get('gender'),
-                                            'age_range': normalized_row.get('age_band'),
-                                            'years_employed': normalized_row.get('tenure'),
-                                            'creation_date': normalized_row.get('created_at'),
-                                            'title_text': normalized_row.get('title'),
-                                            'nps_category': 'promoter' if nps_score >= 9 else ('passive' if nps_score >= 7 else 'detractor')
-                                        })
-                                    
-                                    # Batch insert response data
-                                    if response_batch:
-                                        response_result = supabase.table('nps_response').insert(response_batch).execute()
-                                        
-                                        if response_result.data:
-                                            inserted += len(response_batch)
-                                        else:
-                                            errors += len(batch_data)
-                                            error_details.append(f"Batch failed: Failed to insert into nps_response")
-                                    else:
-                                        errors += len(batch_data)
-                                        error_details.append(f"Batch failed: No response data prepared")
-                                else:
-                                    errors += len(batch_data)
-                                    error_details.append(f"Batch failed: Failed to insert into nps_raw")
-                                
-                                # Clear batch
-                                batch_data = []
-                                
-                            except Exception as db_error:
-                                errors += len(batch_data)
-                                error_details.append(f"Batch failed: Database error: {str(db_error)}")
-                                batch_data = []
-                                continue
-                    
-                    except Exception as e:
-                        errors += 1
-                        error_details.append(f"Row {index + 1}: {str(e)}")
-                        continue
+            resp_raw = sb.table("nps_raw").insert(raw_payload).execute()
+            if not resp_raw.data:
+                errors.append(f"nps_raw insert failed: {resp_raw}")
+            else:
+                raw_saved += len(batch)
 
-        # Final progress update
-        upload_progress[upload_id] = {
-            "status": "completed", 
-            "progress": 100, 
-            "message": f"Upload completed! Inserted: {inserted}, Skipped: {skipped}, Errors: {errors}"
-        }
+            norm_payload = [r["_norm"] for r in batch]
+            resp_norm = sb.table("nps_response").insert(norm_payload).execute()
+            if not resp_norm.data:
+                errors.append(f"nps_response insert failed: {resp_norm}")
+            else:
+                inserted += len(batch)
 
-        return IngestResponse(
+        # Final progress update (kept simple & clearly indented)
+        result = IngestResult(
             inserted=inserted,
             skipped=skipped,
+            raw_saved=raw_saved,
             errors=errors,
-            error_details=error_details
         )
-        
+        return result
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-
-@router.get("/test")
-async def test_ingest():
-    """Test endpoint to verify ingestion service is working"""
-    return {"status": "ingestion service is running", "version": "1.0.0"}
-
-# Global progress tracking
-upload_progress = {}
-
-@router.get("/progress/{upload_id}")
-async def get_progress(upload_id: str):
-    """Get upload progress for a specific upload"""
-    return upload_progress.get(upload_id, {"status": "not_found"})
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")

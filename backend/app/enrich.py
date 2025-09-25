@@ -14,6 +14,7 @@ from openai import AsyncOpenAI
 import time
 import os
 from dotenv import load_dotenv
+from supabase import create_client, Client
 
 load_dotenv()
 
@@ -21,6 +22,13 @@ router = APIRouter(prefix="/enrich", tags=["ai-enrichment"])
 
 # Initialize OpenAI client
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+sb: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 class EnrichmentResponse(BaseModel):
     processed: int
@@ -286,3 +294,67 @@ async def test_enrichment():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+@router.get("/status")
+async def get_enrichment_status():
+    """Get current enrichment status and recent run results"""
+    try:
+        # Get the most recent enrichment run status
+        # For now, return a basic status - this could be enhanced to track actual runs
+        return {
+            "processed": 0,
+            "retried": 0,
+            "failed": 0,
+            "skipped_no_comment": 0,
+            "error_details": [],
+            "is_running": False
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
+
+@router.get("/stats")
+async def get_enrichment_stats():
+    """Get enrichment statistics"""
+    try:
+        # Get total responses
+        total_response = sb.table("nps_response").select("*").execute()
+        total_responses = len(total_response.data) if total_response.data else 0
+        
+        # Get enriched responses
+        enriched_response = sb.table("nps_ai_enrichment").select("*").execute()
+        enriched_responses = len(enriched_response.data) if enriched_response.data else 0
+        
+        # Get pending responses (responses with comments but no enrichment)
+        pending_response = sb.table("nps_response").select("*").neq("nps_explanation", "").execute()
+        pending_responses = max(0, (len(pending_response.data) if pending_response.data else 0) - enriched_responses)
+        
+        # Get unique themes count
+        themes_response = sb.table("nps_ai_enrichment").select("*").execute()
+        all_themes = set()
+        if themes_response.data:
+            for row in themes_response.data:
+                if row.get("themes"):
+                    all_themes.update(row["themes"])
+        themes_found = len(all_themes)
+        
+        # Get average sentiment
+        sentiment_response = sb.table("nps_ai_enrichment").select("*").execute()
+        avg_sentiment = 0
+        if sentiment_response.data:
+            scores = [row["sentiment_score"] for row in sentiment_response.data if row.get("sentiment_score") is not None]
+            avg_sentiment = sum(scores) / len(scores) if scores else 0
+        
+        # Get last enrichment date
+        last_enrichment_response = sb.table("nps_ai_enrichment").select("*").order("created_at", desc=True).limit(1).execute()
+        last_enrichment = last_enrichment_response.data[0]["created_at"] if last_enrichment_response.data else None
+        
+        return {
+            "total_responses": total_responses,
+            "enriched_responses": enriched_responses,
+            "pending_responses": max(0, pending_responses),
+            "last_enrichment": last_enrichment,
+            "themes_found": themes_found,
+            "avg_sentiment": round(avg_sentiment, 3)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")

@@ -10,39 +10,7 @@ import { CalendarIcon, TrendingUp, Users, MessageSquare, BarChart3, Filter, Down
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import WinnersLosers from '@/components/WinnersLosers'
-import { getTopTitleMoMMoves } from '@/lib/winners-losers'
-
-// Mock data - replace with actual API calls
-const mockData = {
-  kpis: {
-    currentNps: 42,
-    previousNps: 38,
-    totalResponses: 1247,
-    promoters: 523,
-    passives: 312,
-    detractors: 412,
-    responseRate: 15.2
-  },
-  monthlyTrends: [
-    { month: 'Jan', nps: 35, responses: 89 },
-    { month: 'Feb', nps: 38, responses: 95 },
-    { month: 'Mar', nps: 42, responses: 112 },
-    { month: 'Apr', nps: 40, responses: 98 },
-    { month: 'May', nps: 45, responses: 125 },
-    { month: 'Jun', nps: 42, responses: 118 }
-  ],
-  surveyBreakdown: [
-    { survey: 'LLT_Nieuws', nps: 42, responses: 1247, change: 4 },
-    { survey: 'Customer_Service', nps: 38, responses: 892, change: -2 },
-    { survey: 'Product_Feedback', nps: 45, responses: 634, change: 7 }
-  ],
-  titleBreakdown: [
-    { title: 'Trouw', nps: 44, responses: 456, change: 3 },
-    { title: 'Volkskrant', nps: 40, responses: 321, change: -1 },
-    { title: 'NRC', nps: 38, responses: 289, change: 2 },
-    { title: 'AD', nps: 35, responses: 181, change: -3 }
-  ]
-}
+import { getNpsSummary, getMonthlyTrends, getNpsBySurvey, getNpsByTitle, getMomMoves } from '@/lib/data'
 
 interface OverviewPageProps {
   searchParams: {
@@ -54,23 +22,53 @@ interface OverviewPageProps {
 }
 
 export default async function OverviewPage({ searchParams }: OverviewPageProps) {
-  // Get Winners/Losers data with error handling
-  let winnersLosersData = [];
-  try {
-    winnersLosersData = await getTopTitleMoMMoves({
-      start: searchParams.start ?? undefined,
-      end: searchParams.end ?? undefined,
-      survey: searchParams.survey ?? null,
-      minResponses: 30,
-      topK: 5,
-    });
-  } catch (error) {
-    console.error('Error fetching winners/losers data:', error);
-    // Use empty data as fallback
+  // Fetch real data from database
+  const [npsSummary, monthlyTrends, surveyData, titleData, momMoves] = await Promise.all([
+    getNpsSummary(),
+    getMonthlyTrends(searchParams.start, searchParams.end),
+    getNpsBySurvey(),
+    getNpsByTitle(),
+    getMomMoves(searchParams.start, searchParams.end, 30, 5)
+  ])
+
+  // Transform data for display
+  const kpis = npsSummary ? {
+    currentNps: npsSummary.nps_score,
+    totalResponses: npsSummary.total_responses,
+    promoters: npsSummary.promoters,
+    passives: npsSummary.passives,
+    detractors: npsSummary.detractors,
+    avgScore: npsSummary.avg_score
+  } : {
+    currentNps: 0,
+    totalResponses: 0,
+    promoters: 0,
+    passives: 0,
+    detractors: 0,
+    avgScore: 0
   }
 
-  const npsChange = mockData.kpis.currentNps - mockData.kpis.previousNps
-  const npsChangePercent = ((npsChange / mockData.kpis.previousNps) * 100).toFixed(1)
+  const transformedMonthlyTrends = monthlyTrends.map(trend => ({
+    month: new Date(trend.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+    nps: trend.nps_score,
+    responses: trend.total_responses
+  }))
+
+  const transformedSurveyData = surveyData.map(survey => ({
+    survey: survey.survey_name,
+    nps: survey.nps_score,
+    responses: survey.total_responses,
+    change: 0 // We don't have historical data for change calculation yet
+  }))
+
+  const transformedTitleData = titleData.map(title => ({
+    title: title.title_text,
+    nps: title.nps_score,
+    responses: title.total_responses,
+    change: 0 // We don't have historical data for change calculation yet
+  }))
+
+  const winnersLosersData = momMoves
 
   return (
     <div className="space-y-6">
@@ -131,14 +129,9 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.kpis.currentNps}</div>
+            <div className="text-2xl font-bold">{kpis.currentNps}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              {npsChange > 0 ? (
-                <span className="text-green-600">+{npsChange} ({npsChangePercent}%)</span>
-              ) : (
-                <span className="text-red-600">{npsChange} ({npsChangePercent}%)</span>
-              )}
-              <span className="ml-1">vs last month</span>
+              <span className="text-muted-foreground">Net Promoter Score</span>
             </div>
           </CardContent>
         </Card>
@@ -149,9 +142,9 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.kpis.totalResponses.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{kpis.totalResponses.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {mockData.kpis.responseRate}% response rate
+              All time responses
             </p>
           </CardContent>
         </Card>
@@ -162,9 +155,9 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{mockData.kpis.promoters}</div>
+            <div className="text-2xl font-bold text-green-600">{kpis.promoters.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((mockData.kpis.promoters / mockData.kpis.totalResponses) * 100)}% of total
+              {kpis.totalResponses > 0 ? Math.round((kpis.promoters / kpis.totalResponses) * 100) : 0}% of total
             </p>
           </CardContent>
         </Card>
@@ -175,9 +168,9 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{mockData.kpis.detractors}</div>
+            <div className="text-2xl font-bold text-red-600">{kpis.detractors.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((mockData.kpis.detractors / mockData.kpis.totalResponses) * 100)}% of total
+              {kpis.totalResponses > 0 ? Math.round((kpis.detractors / kpis.totalResponses) * 100) : 0}% of total
             </p>
           </CardContent>
         </Card>
@@ -203,12 +196,38 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
               <CardDescription>Monthly NPS trends and response volume</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-80 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-center">
-                  <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Chart component would go here</p>
-                  <p className="text-sm text-gray-400">Monthly NPS trends visualization</p>
-                </div>
+              <div className="space-y-4">
+                {transformedMonthlyTrends.length > 0 ? (
+                  transformedMonthlyTrends.map((trend, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <p className="font-medium">{trend.month}</p>
+                        <p className="text-sm text-muted-foreground">{trend.responses} responses</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">{trend.nps}</p>
+                        <div className="flex items-center">
+                          {trend.change > 0 ? (
+                            <span className="text-green-600 text-sm">+{trend.change}</span>
+                          ) : trend.change < 0 ? (
+                            <span className="text-red-600 text-sm">{trend.change}</span>
+                          ) : (
+                            <span className="text-gray-600 text-sm">0</span>
+                          )}
+                          <span className="text-muted-foreground text-sm ml-1">vs previous</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-40 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-center">
+                      <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No trend data available</p>
+                      <p className="text-sm text-gray-400">Upload more data to see trends</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -222,7 +241,7 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockData.surveyBreakdown.map((survey, index) => (
+                {transformedSurveyData.map((survey, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
                       <p className="font-medium">{survey.survey}</p>
@@ -259,7 +278,7 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockData.titleBreakdown.map((title, index) => (
+                {transformedTitleData.map((title, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
                       <p className="font-medium">{title.title}</p>

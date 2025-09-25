@@ -7,7 +7,7 @@ import { CalendarIcon, Filter, TrendingUp, TrendingDown, Minus } from "lucide-re
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import AiExplainer from "@/components/AiExplainer";
-import { getMonthlyTrendWithMoM } from "@/lib/trends";
+import { getMonthlyTrends, getNpsByTitle } from "@/lib/data";
 
 interface TrendsPageProps {
   searchParams: {
@@ -19,19 +19,19 @@ interface TrendsPageProps {
 }
 
 export default async function TrendsPage({ searchParams }: TrendsPageProps) {
-  // Get monthly trend data with MoM deltas with error handling
-  let trendData = [];
-  try {
-    trendData = await getMonthlyTrendWithMoM({
-      start: searchParams.start ?? undefined,
-      end: searchParams.end ?? undefined,
-      survey: searchParams.survey ?? null,
-      title: searchParams.title ?? null,
-    });
-  } catch (error) {
-    console.error('Error fetching trend data:', error);
-    // Use empty data as fallback
-  }
+  // Get real trend data
+  const [monthlyTrends, titleData] = await Promise.all([
+    getMonthlyTrends(searchParams.start, searchParams.end),
+    getNpsByTitle()
+  ]);
+
+  // Transform monthly trends data
+  const trendData = monthlyTrends.map(trend => ({
+    month: trend.month,
+    title: 'All Titles', // For now, show aggregate data
+    nps_score: trend.nps_score,
+    mom_delta: 0 // We don't have historical data for comparison yet
+  }));
 
   // Group data by title for easier rendering
   const dataByTitle = trendData.reduce((acc, item) => {
