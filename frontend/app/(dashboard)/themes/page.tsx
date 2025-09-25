@@ -27,13 +27,15 @@ function getLastFullMonth() {
 // Get themes data from AI enrichment (direct query)
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    console.log('Getting themes from AI enrichment data');
+    console.log('Getting themes from AI enrichment data with params:', params);
     const { data, error } = await supabase
       .from('nps_ai_enrichment')
       .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, creation_date, survey_name, title_text)')
       .gte('nps_response.creation_date', params.start || '2024-01-01')
       .lte('nps_response.creation_date', params.end || '2024-12-31')
       .not('themes', 'is', null);
+    
+    console.log('Themes query result:', { dataCount: data?.length, error });
     
     if (error) {
       console.error('Fallback query error:', error);
@@ -61,13 +63,16 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
     
     const total = Array.from(themeMap.values()).reduce((sum, data) => sum + data.count, 0);
     
-    return Array.from(themeMap.entries()).map(([theme, data]) => ({
+    const result = Array.from(themeMap.entries()).map(([theme, data]) => ({
       theme,
       count_responses: data.count,
       share_pct: Math.round((data.count / total) * 100 * 10) / 10,
       avg_sentiment: Math.round(data.sentiment.reduce((a, b) => a + b, 0) / data.sentiment.length * 100) / 100,
       avg_nps: Math.round(data.nps.reduce((a, b) => a + b, 0) / data.nps.length * 10) / 10
     })).sort((a, b) => b.count_responses - a.count_responses);
+    
+    console.log(`Processed ${result.length} themes from ${data?.length || 0} responses:`, result.slice(0, 5));
+    return result;
   } catch (error) {
     console.error('Error in getThemes:', error);
     return [];
@@ -77,17 +82,47 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
 // Get promoters vs detractors data
 async function getPromoterDetractorData(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    const { data, error } = await supabase.rpc('themes_promoter_detractor', {
-      p_start_date: params.start ?? null,
-      p_end_date: params.end ?? null,
-      p_survey: params.survey ?? null,
-      p_title: params.title ?? null,
-    });
+    console.log('Getting promoter/detractor data from AI enrichment');
+    const { data, error } = await supabase
+      .from('nps_ai_enrichment')
+      .select('themes, promoter_flag, detractor_flag, nps_response!inner(creation_date, survey_name, title_text)')
+      .gte('nps_response.creation_date', params.start || '2024-01-01')
+      .lte('nps_response.creation_date', params.end || '2024-12-31')
+      .not('themes', 'is', null);
+    
     if (error) {
-      console.error('RPC Error:', error);
+      console.error('Promoter/detractor query error:', error);
       return [];
     }
-    return data || [];
+    
+    console.log(`Found ${data?.length || 0} responses for promoter/detractor analysis`);
+    
+    // Process the data to get theme counts by promoter/detractor
+    const themeMap = new Map<string, { promoters: number; detractors: number }>();
+    
+    data?.forEach(row => {
+      const themes = row.themes as string[];
+      const isPromoter = row.promoter_flag;
+      const isDetractor = row.detractor_flag;
+      
+      themes.forEach(theme => {
+        if (!themeMap.has(theme)) {
+          themeMap.set(theme, { promoters: 0, detractors: 0 });
+        }
+        const data = themeMap.get(theme)!;
+        if (isPromoter) data.promoters++;
+        if (isDetractor) data.detractors++;
+      });
+    });
+    
+    const result = Array.from(themeMap.entries()).map(([theme, data]) => ({
+      theme,
+      promoters: data.promoters,
+      detractors: data.detractors
+    })).sort((a, b) => (b.promoters + b.detractors) - (a.promoters + a.detractors));
+    
+    console.log(`Processed ${result.length} themes for promoter/detractor analysis:`, result.slice(0, 5));
+    return result;
   } catch (error) {
     console.error('Error in getPromoterDetractorData:', error);
     return [];
