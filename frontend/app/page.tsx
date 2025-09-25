@@ -4,6 +4,7 @@ import FiltersBar from "@/components/filters/FiltersBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle } from "lucide-react";
+import { Navigation } from "@/components/navigation";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -197,13 +198,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   ]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">NPS Insights</h1>
-        <p className="text-muted-foreground">
-          Overzicht van de belangrijkste NPS-inzichten voor de gekozen periode. Gebruik dit om snel te zien wat er verbeterd is, wat verslechterd is en welke onderwerpen klanten het meest noemen.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">NPS Insights</h1>
+            <p className="text-muted-foreground">
+              Overzicht van de belangrijkste NPS-inzichten voor de gekozen periode. Gebruik dit om snel te zien wat er verbeterd is, wat verslechterd is en welke onderwerpen klanten het meest noemen.
+            </p>
+          </div>
 
       <FiltersBar surveys={surveys} titles={titles} />
 
@@ -401,6 +405,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </p>
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }
