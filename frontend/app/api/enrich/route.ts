@@ -15,7 +15,7 @@ function isEmptyComment(s?: string | null) {
 }
 
 export async function POST() {
-  const BATCH = 5; // Reduce batch size for testing
+  const BATCH = 100; // Process in batches of 100
   let processed = 0, skipped_no_comment = 0, failed = 0;
 
   try {
