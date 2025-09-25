@@ -24,14 +24,14 @@ export async function POST() {
       .from('nps_response')
       .select(`
         id,
-        survey_type,
+        survey_name,
         nps_score,
-        title,
-        comment,
+        title_text,
+        nps_explanation,
         nps_ai_enrichment!left(id)
       `)
       .is('nps_ai_enrichment.id', null)
-      .not('comment', 'is', null)
+      .not('nps_explanation', 'is', null)
       .limit(BATCH);
 
     if (error) {
@@ -45,16 +45,16 @@ export async function POST() {
 
     for (const r of rows) {
       try {
-        if (isEmptyComment(r.comment)) { 
+        if (isEmptyComment(r.nps_explanation)) { 
           skipped_no_comment++; 
           continue; 
         }
 
         const user = CLASSIFY_USER_TEMPLATE_NL({
-          survey_type: r.survey_type,
+          survey_type: r.survey_name,
           nps_score: r.nps_score,
-          title: r.title,
-          comment: r.comment,
+          title: r.title_text,
+          comment: r.nps_explanation,
         });
 
         const json = await classifyNlStrictJSON(CLASSIFY_SYSTEM_NL, user);
@@ -63,19 +63,20 @@ export async function POST() {
         const passive_flag = r.nps_score >= 7 && r.nps_score <= 8;
         const detractor_flag = r.nps_score <= 6;
 
-        const vector = await embed(r.comment);
+        const vector = await embed(r.nps_explanation);
 
         const insert = await supabaseAdmin.from("nps_ai_enrichment").insert({
           response_id: r.id,
-          sentiment: json?.sentiment ?? null,
+          sentiment_score: json?.sentiment ?? null,
+          sentiment_label: json?.sentiment_label ?? null,
           promoter_flag, 
           passive_flag, 
           detractor_flag,
           themes: json?.themes ?? ["overige"],
           theme_scores: json?.theme_scores ?? {},
-          extracted_keywords: json?.keywords ?? [],
+          keywords: json?.keywords ?? [],
           language: "nl",
-          embedded_vector: vector,
+          embedding_vector: vector,
         });
 
         if (insert.error) { 
