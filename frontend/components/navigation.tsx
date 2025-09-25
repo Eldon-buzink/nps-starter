@@ -19,19 +19,7 @@ export function Navigation() {
               <Link href="/">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Home className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-              </Link>
-              <Link href="/overview">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Overview</span>
-                </Button>
-              </Link>
-              <Link href="/responses">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Responses</span>
+                  <span>Home</span>
                 </Button>
               </Link>
               <Link href="/themes">
@@ -40,16 +28,16 @@ export function Navigation() {
                   <span>Themes</span>
                 </Button>
               </Link>
+              <Link href="/responses">
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Responses</span>
+                </Button>
+              </Link>
               <Link href="/trends">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <TrendingUp className="h-4 w-4" />
                   <span>Trends</span>
-                </Button>
-              </Link>
-              <Link href="/ai-enrichment">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <Brain className="h-4 w-4" />
-                  <span>AI Analysis</span>
                 </Button>
               </Link>
             </div>
