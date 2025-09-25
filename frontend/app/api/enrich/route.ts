@@ -15,10 +15,12 @@ function isEmptyComment(s?: string | null) {
 }
 
 export async function POST() {
-  const BATCH = 75;
+  const BATCH = 5; // Reduce batch size for testing
   let processed = 0, skipped_no_comment = 0, failed = 0;
 
   try {
+    console.log('Starting enrichment process...');
+    
     // 1) fetch unenriched rows using a simple query
     const { data: rows, error } = await supabaseAdmin
       .from('nps_response')
@@ -39,7 +41,13 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log(`Found ${rows?.length || 0} unenriched rows`);
+    if (rows?.length > 0) {
+      console.log('Sample row:', rows[0]);
+    }
+
     if (!rows?.length) {
+      console.log('No unenriched rows found');
       return NextResponse.json({ processed, skipped_no_comment, failed });
     }
 
@@ -76,17 +84,33 @@ export async function POST() {
           theme_scores: json?.theme_scores ?? {},
           keywords: json?.keywords ?? [],
           language: "nl",
-          embedding_vector: vector,
+          // Try different possible column names for the vector
+          embedded_vector: vector,
         });
 
         if (insert.error) { 
           console.error('Error inserting enrichment:', insert.error);
+          console.error('Row data:', r);
+          console.error('Insert data:', {
+            response_id: r.id,
+            sentiment_score: json?.sentiment ?? null,
+            sentiment_label: json?.sentiment_label ?? null,
+            promoter_flag, 
+            passive_flag, 
+            detractor_flag,
+            themes: json?.themes ?? ["overige"],
+            theme_scores: json?.theme_scores ?? {},
+            keywords: json?.keywords ?? [],
+            language: "nl",
+            embedding_vector: vector,
+          });
           failed++; 
           continue; 
         }
         processed++;
       } catch (e) {
         console.error('Error processing row:', e);
+        console.error('Row data:', r);
         failed++;
       }
     }
