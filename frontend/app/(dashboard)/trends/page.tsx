@@ -1,13 +1,23 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Filter, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { createClient } from "@supabase/supabase-js";
+import { getFilterOptions } from "@/lib/filters";
+import FiltersBar from "@/components/filters/FiltersBar";
 import AiExplainer from "@/components/AiExplainer";
-import { getMonthlyTrends, getNpsByTitle } from "@/lib/data";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+async function getTrends(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
+  const { data, error } = await supabase.rpc("nps_trend_by_title_with_mom", {
+    p_start_date: params.start ?? null,
+    p_end_date: params.end ?? null,
+    p_survey: params.survey ?? null,
+    p_title: params.title ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return data as { month:string; title:string; responses:number; nps:number; mom_delta:number|null }[];
+}
 
 interface TrendsPageProps {
   searchParams: {
@@ -19,210 +29,56 @@ interface TrendsPageProps {
 }
 
 export default async function TrendsPage({ searchParams }: TrendsPageProps) {
-  // Get real trend data
-  const [monthlyTrends, titleData] = await Promise.all([
-    getMonthlyTrends(searchParams.start, searchParams.end),
-    getNpsByTitle()
-  ]);
+  const { surveys, titles } = await getFilterOptions();
+  const start = searchParams?.start ?? null;
+  const end   = searchParams?.end ?? null;
+  const survey= searchParams?.survey ?? null;
+  const title = searchParams?.title ?? null;
 
-  // Transform monthly trends data
-  const trendData = monthlyTrends.map(trend => ({
-    month: trend.month,
-    title: 'All Titles', // For now, show aggregate data
-    nps_score: trend.nps_score,
-    mom_delta: 0 // We don't have historical data for comparison yet
-  }));
+  const rows  = await getTrends({ 
+    start: start ?? undefined, 
+    end: end ?? undefined, 
+    survey: survey ?? undefined, 
+    title: title ?? undefined 
+  });
 
-  // Group data by title for easier rendering
-  const dataByTitle = trendData.reduce((acc, item) => {
-    if (!acc[item.title]) {
-      acc[item.title] = [];
-    }
-    acc[item.title].push(item);
-    return acc;
-  }, {} as Record<string, typeof trendData>);
-
-  const getMoMIcon = (delta: number | null) => {
-    if (delta === null) return <Minus className="h-4 w-4 text-gray-500" />;
-    if (delta > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (delta < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4 text-gray-500" />;
-  };
-
-  const getMoMColor = (delta: number | null) => {
-    if (delta === null) return "text-gray-500";
-    if (delta > 0) return "text-green-600";
-    if (delta < 0) return "text-red-600";
-    return "text-gray-500";
-  };
+  // Group by month for a compact list + pass to a client Chart
+  const chartData = rows.map(r => ({ month: r.month, nps: r.nps, responses: r.responses }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">NPS Trends</h1>
-        <p className="text-muted-foreground">Maandelijkse NPS trends per merk met MoM (Month-over-Month) deltas</p>
-      </div>
-      
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">NPS Trends</h1>
+      <p className="text-sm text-muted-foreground">Maandelijkse NPS trends per merk met MoM (Month-over-Month) deltas.</p>
+
       <AiExplainer compact />
-      
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Survey Type</label>
-              <Select defaultValue={searchParams.survey ?? "all"}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All surveys" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Surveys</SelectItem>
-                  <SelectItem value="LLT_Nieuws">LLT Nieuws</SelectItem>
-                  <SelectItem value="Customer_Service">Customer Service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Title</label>
-              <Select defaultValue={searchParams.title ?? "all"}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All titles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Titles</SelectItem>
-                  <SelectItem value="Trouw">Trouw</SelectItem>
-                  <SelectItem value="Volkskrant">Volkskrant</SelectItem>
-                  <SelectItem value="NRC">NRC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date Range</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !searchParams.start && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {searchParams.start ? (
-                      searchParams.end ? (
-                        <>
-                          {format(new Date(searchParams.start), "LLL dd, y")} -{" "}
-                          {format(new Date(searchParams.end), "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(new Date(searchParams.start), "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={searchParams.start ? new Date(searchParams.start) : undefined}
-                    selected={{
-                      from: searchParams.start ? new Date(searchParams.start) : undefined,
-                      to: searchParams.end ? new Date(searchParams.end) : undefined,
-                    }}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Trends by Title */}
-      <div className="space-y-6">
-        {Object.entries(dataByTitle).map(([title, trends]) => (
-          <Card key={title}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{title}</span>
-                <span className="text-sm font-normal text-muted-foreground">
-                  {trends.length} maanden
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2 font-medium">Maand</th>
-                      <th className="text-right p-2 font-medium">Responses</th>
-                      <th className="text-right p-2 font-medium">NPS Score</th>
-                      <th className="text-right p-2 font-medium">MoM Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trends.map((trend) => (
-                      <tr key={`${trend.month}-${trend.title}`} className="border-b">
-                        <td className="p-2 text-sm">
-                          {format(new Date(trend.month), "MMM yyyy")}
-                        </td>
-                        <td className="p-2 text-sm text-right">
-                          {trend.responses}
-                        </td>
-                        <td className="p-2 text-sm text-right font-mono">
-                          {trend.nps}
-                        </td>
-                        <td className="p-2 text-sm text-right">
-                          <div className="flex items-center justify-end space-x-1">
-                            {getMoMIcon(trend.mom_delta)}
-                            <span className={cn("font-mono", getMoMColor(trend.mom_delta))}>
-                              {trend.mom_delta !== null ? 
-                                (trend.mom_delta > 0 ? `+${trend.mom_delta}` : trend.mom_delta.toString()) 
-                                : "—"
-                              }
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <FiltersBar surveys={surveys} titles={titles} />
+
+      {/* Chart section */}
+      <div className="rounded-lg border p-4">
+        {/* Replace with your chart component; show a simple fallback */}
+        {chartData.length ? (
+          <ul className="grid gap-2 md:grid-cols-2">
+            {rows.map((r,i)=>(
+              <li key={`${r.month}-${i}`} className="flex items-center justify-between rounded border p-3">
+                <div>
+                  <div className="font-medium">{new Date(r.month).toLocaleString("nl-NL",{ month:"short", year:"numeric" })}</div>
+                  <div className="text-xs text-muted-foreground">{r.responses} responses</div>
+                </div>
+                <div className="text-xl font-semibold">{r.nps?.toFixed(1) ?? "—"}</div>
+                <div className="text-xs text-muted-foreground w-20 text-right">
+                  {r.mom_delta == null ? "—" : `${r.mom_delta > 0 ? "+" : ""}${r.mom_delta.toFixed(1)} vs prev`}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-sm text-muted-foreground">Geen data voor deze filters.</div>
+        )}
       </div>
-      
-      {Object.keys(dataByTitle).length === 0 && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Nog geen trend data beschikbaar. Upload eerst data en voer AI verrijking uit.</p>
-            <p className="text-xs text-muted-foreground mt-2">Trends worden berekend op basis van maandelijkse NPS scores per merk.</p>
-          </CardContent>
-        </Card>
-      )}
-      
-      {Object.keys(dataByTitle).length > 0 && (
-        <Card>
-          <CardContent className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
-              MoM Delta toont de verandering in NPS score ten opzichte van de vorige maand. 
-              Groen = verbetering, Rood = verslechtering, Grijs = geen vorige maand beschikbaar.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+
+      <p className="text-xs text-muted-foreground">
+        MoM Delta toont de verandering t.o.v. vorige maand. Groen = verbetering, Rood = verslechtering, Grijs = geen vorige maand beschikbaar.
+      </p>
     </div>
   );
 }

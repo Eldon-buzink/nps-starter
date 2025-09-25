@@ -2,8 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Users, MessageSquare, BarChart3, Upload, AlertCircle } from "lucide-react"
-import { UploadDialog } from "@/components/UploadDialog"
+import { TrendingUp, Users, MessageSquare, BarChart3, AlertCircle } from "lucide-react"
 import { getNpsSummary, getRecentResponses, type NpsSummary, type RecentResponse } from "@/lib/data"
 import { useEffect, useState } from "react"
 
@@ -34,12 +33,9 @@ export function Dashboard() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">NPS Dashboard</h1>
-            <p className="text-muted-foreground">Loading your NPS insights...</p>
-          </div>
-          <UploadDialog />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">NPS Dashboard</h1>
+          <p className="text-muted-foreground">Loading your NPS insights...</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
@@ -72,14 +68,11 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">NPS Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor and analyze your Net Promoter Score insights
-          </p>
-        </div>
-            <UploadDialog />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">NPS Dashboard</h1>
+        <p className="text-muted-foreground">
+          Monitor and analyze your Net Promoter Score insights
+        </p>
       </div>
 
       {/* Key Metrics */}
@@ -258,9 +251,6 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-                  <div className="w-full">
-                    <UploadDialog />
-                  </div>
               <Button className="w-full justify-start" variant="outline">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Generate Report
