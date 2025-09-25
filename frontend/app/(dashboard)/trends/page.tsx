@@ -9,14 +9,66 @@ const supabase = createClient(
 );
 
 async function getTrends(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
-  const { data, error } = await supabase.rpc("nps_trend_by_title_with_mom", {
-    p_start_date: params.start ?? null,
-    p_end_date: params.end ?? null,
-    p_survey: params.survey ?? null,
-    p_title: params.title ?? null,
-  });
+  try {
+    // Try RPC first
+    const { data, error } = await supabase.rpc("nps_trend_by_title_with_mom", {
+      p_start_date: params.start ?? null,
+      p_end_date: params.end ?? null,
+      p_survey: params.survey ?? null,
+      p_title: params.title ?? null,
+    });
+    if (error) {
+      console.error('RPC Error:', error);
+      // Fallback to direct query
+      return await getTrendsFallback(params);
+    }
+    return data as { month:string; title:string; responses:number; nps:number; mom_delta:number|null }[];
+  } catch (error) {
+    console.error('RPC failed, using fallback:', error);
+    return await getTrendsFallback(params);
+  }
+}
+
+async function getTrendsFallback(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
+  // Simple fallback - get monthly data directly
+  const { data, error } = await supabase
+    .from('nps_response')
+    .select('creation_date, title_text, nps_score, nps_category')
+    .gte('creation_date', params.start || '2024-01-01')
+    .lte('creation_date', params.end || '2025-12-31')
+    .not('title_text', 'is', null);
+  
   if (error) throw new Error(error.message);
-  return data as { month:string; title:string; responses:number; nps:number; mom_delta:number|null }[];
+  
+  // Group by month and title
+  const monthlyData = new Map<string, { responses: number; promoters: number; detractors: number }>();
+  
+  data?.forEach(row => {
+    const month = row.creation_date.substring(0, 7); // YYYY-MM
+    const key = `${month}-${row.title_text}`;
+    
+    if (!monthlyData.has(key)) {
+      monthlyData.set(key, { responses: 0, promoters: 0, detractors: 0 });
+    }
+    
+    const data = monthlyData.get(key)!;
+    data.responses++;
+    if (row.nps_category === 'promoter') data.promoters++;
+    if (row.nps_category === 'detractor') data.detractors++;
+  });
+  
+  // Convert to result format
+  return Array.from(monthlyData.entries()).map(([key, data]) => {
+    const [month, title] = key.split('-', 2);
+    const nps = ((data.promoters - data.detractors) / data.responses) * 100;
+    return {
+      month,
+      title,
+      responses: data.responses,
+      nps: Math.round(nps * 10) / 10,
+      mom_delta: null // No historical data for comparison
+    };
+  }).sort((a, b) => b.month.localeCompare(a.month));
 }
 
 interface TrendsPageProps {
