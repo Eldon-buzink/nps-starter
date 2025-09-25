@@ -139,12 +139,11 @@ export default function SettingsPage() {
               try {
                 const response = await fetch('/api/enrich', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ batch_size: 100 })
+                  headers: { 'Content-Type': 'application/json' }
                 });
                 const result = await response.json();
                 if (response.ok) {
-                  alert(`Enrichment started! ${result.processed} responses processed.`);
+                  alert(`Enrichment completed! ${result.processed} responses processed, ${result.skipped_no_comment} skipped, ${result.failed} failed.`);
                 } else {
                   alert(`Error: ${result.error}`);
                 }

@@ -23,20 +23,64 @@ function getLastFullMonth() {
   };
 }
 
-// Get overall trends data
+// Get overall trends data (with fallback)
 async function getOverallTrends(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    const { data, error } = await supabase.rpc('nps_trend_by_title_with_mom', {
+    // Try RPC first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('nps_trend_by_title_with_mom', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
       p_title: params.title ?? null,
     });
+    
+    if (!rpcError && rpcData) {
+      return rpcData;
+    }
+    
+    // Fallback: get monthly data directly
+    console.log('RPC failed, using direct query fallback for trends');
+    const { data, error } = await supabase
+      .from('nps_response')
+      .select('creation_date, title_text, nps_score, nps_category')
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31')
+      .not('title_text', 'is', null);
+    
     if (error) {
-      console.error('RPC Error:', error);
+      console.error('Fallback query error:', error);
       return [];
     }
-    return data || [];
+    
+    // Group by month and title
+    const monthlyData = new Map<string, { responses: number; promoters: number; detractors: number }>();
+    
+    data?.forEach(row => {
+      const month = row.creation_date.substring(0, 7); // YYYY-MM
+      const key = `${month}-${row.title_text}`;
+      
+      if (!monthlyData.has(key)) {
+        monthlyData.set(key, { responses: 0, promoters: 0, detractors: 0 });
+      }
+      
+      const data = monthlyData.get(key)!;
+      data.responses++;
+      if (row.nps_category === 'promoter') data.promoters++;
+      if (row.nps_category === 'detractor') data.detractors++;
+    });
+    
+    // Convert to result format
+    return Array.from(monthlyData.entries()).map(([key, data]) => {
+      const [month, title] = key.split('-', 2);
+      const nps = ((data.promoters - data.detractors) / data.responses) * 100;
+      return {
+        month,
+        title,
+        responses: data.responses,
+        nps: Math.round(nps * 10) / 10,
+        mom_delta: null // No historical data for comparison
+      };
+    }).sort((a, b) => b.month.localeCompare(a.month));
   } catch (error) {
     console.error('Error in getOverallTrends:', error);
     return [];

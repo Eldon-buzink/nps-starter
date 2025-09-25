@@ -24,20 +24,63 @@ function getLastFullMonth() {
   };
 }
 
-// Get themes data from themes_aggregate
+// Get themes data from themes_aggregate (with fallback)
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    const { data, error } = await supabase.rpc('themes_aggregate', {
+    // Try RPC first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('themes_aggregate', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
       p_title: params.title ?? null,
     });
+    
+    if (!rpcError && rpcData) {
+      return rpcData;
+    }
+    
+    // Fallback: get themes from AI enrichment data
+    console.log('RPC failed, using direct query fallback for themes');
+    const { data, error } = await supabase
+      .from('nps_ai_enrichment')
+      .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, nps_category, creation_date, survey_name, title_text)')
+      .gte('nps_response.creation_date', params.start || '2024-01-01')
+      .lte('nps_response.creation_date', params.end || '2025-12-31')
+      .not('themes', 'is', null);
+    
     if (error) {
-      console.error('RPC Error:', error);
+      console.error('Fallback query error:', error);
       return [];
     }
-    return data || [];
+    
+    // Process theme data
+    const themeMap = new Map<string, { count: number; sentiment: number[]; nps: number[] }>();
+    
+    data?.forEach(row => {
+      const themes = row.themes as string[];
+      const sentiment = row.sentiment_score || 0;
+      const nps = row.nps_response?.nps_score || 0;
+      
+      themes.forEach(theme => {
+        if (!themeMap.has(theme)) {
+          themeMap.set(theme, { count: 0, sentiment: [], nps: [] });
+        }
+        const data = themeMap.get(theme)!;
+        data.count++;
+        data.sentiment.push(sentiment);
+        data.nps.push(nps);
+      });
+    });
+    
+    const total = Array.from(themeMap.values()).reduce((sum, data) => sum + data.count, 0);
+    
+    return Array.from(themeMap.entries()).map(([theme, data]) => ({
+      theme,
+      count_responses: data.count,
+      share_pct: Math.round((data.count / total) * 100 * 10) / 10,
+      avg_sentiment: Math.round(data.sentiment.reduce((a, b) => a + b, 0) / data.sentiment.length * 100) / 100,
+      avg_nps: Math.round(data.nps.reduce((a, b) => a + b, 0) / data.nps.length * 10) / 10
+    })).sort((a, b) => b.count_responses - a.count_responses);
   } catch (error) {
     console.error('Error in getThemes:', error);
     return [];
