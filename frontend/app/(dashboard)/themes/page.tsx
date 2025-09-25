@@ -24,28 +24,15 @@ function getLastFullMonth() {
   };
 }
 
-// Get themes data from themes_aggregate (with fallback)
+// Get themes data from AI enrichment (direct query)
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    // Try RPC first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('themes_aggregate', {
-      p_start_date: params.start ?? null,
-      p_end_date: params.end ?? null,
-      p_survey: params.survey ?? null,
-      p_title: params.title ?? null,
-    });
-    
-    if (!rpcError && rpcData) {
-      return rpcData;
-    }
-    
-    // Fallback: get themes from AI enrichment data
-    console.log('RPC failed, using direct query fallback for themes');
+    console.log('Getting themes from AI enrichment data');
     const { data, error } = await supabase
       .from('nps_ai_enrichment')
-      .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, nps_category, creation_date, survey_name, title_text)')
+      .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, creation_date, survey_name, title_text)')
       .gte('nps_response.creation_date', params.start || '2024-01-01')
-      .lte('nps_response.creation_date', params.end || '2025-12-31')
+      .lte('nps_response.creation_date', params.end || '2024-12-31')
       .not('themes', 'is', null);
     
     if (error) {

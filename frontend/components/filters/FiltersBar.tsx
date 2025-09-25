@@ -16,18 +16,12 @@ export default function FiltersBar({
   const [start, setStart]   = useState(sp.get("start") ?? "");
   const [end, setEnd]       = useState(sp.get("end") ?? "");
 
-  // Set default period to last full calendar month if no dates provided
+  // Set default period to cover 2024 data if no dates provided
   useEffect(() => {
     if (!start && !end) {
-      const now = new Date();
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      
-      const startStr = lastMonth.toISOString().split('T')[0];
-      const endStr = lastDayOfLastMonth.toISOString().split('T')[0];
-      
-      setStart(startStr);
-      setEnd(endStr);
+      // Set to cover 2024 data (your actual data period)
+      setStart("2024-01-01");
+      setEnd("2024-12-31");
     }
   }, [start, end]);
 

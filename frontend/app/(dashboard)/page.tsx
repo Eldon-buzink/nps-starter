@@ -41,9 +41,9 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     console.log('RPC failed, using direct query fallback');
     let query = supabase
       .from('nps_response')
-      .select('nps_score, nps_category')
+      .select('nps_score')
       .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .lte('creation_date', params.end || '2024-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
