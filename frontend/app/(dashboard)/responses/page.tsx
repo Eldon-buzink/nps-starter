@@ -195,8 +195,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Responses</h1>
           <p className="text-muted-foreground">
@@ -229,12 +228,12 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
               </div>
               <div>
                 <label className="block text-sm mb-1">NPS Categorie</label>
-                <Select defaultValue={nps_bucket || ''}>
+                <Select defaultValue={nps_bucket || undefined}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle categorieën" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Alle categorieën</SelectItem>
+                    <SelectItem value="all">Alle categorieën</SelectItem>
                     <SelectItem value="promoter">Promoter (9-10)</SelectItem>
                     <SelectItem value="passive">Passive (7-8)</SelectItem>
                     <SelectItem value="detractor">Detractor (0-6)</SelectItem>
@@ -243,12 +242,12 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
               </div>
               <div>
                 <label className="block text-sm mb-1">Thema</label>
-                <Select defaultValue={theme || ''}>
+                <Select defaultValue={theme || undefined}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle thema's" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Alle thema's</SelectItem>
+                    <SelectItem value="all">Alle thema's</SelectItem>
                     {availableThemes.map(t => (
                       <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>
                     ))}
@@ -358,7 +357,6 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
             </Button>
           </div>
         )}
-      </div>
     </div>
   );
 }

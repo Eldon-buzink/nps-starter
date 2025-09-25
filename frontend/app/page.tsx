@@ -22,30 +22,61 @@ function getLastFullMonth() {
   };
 }
 
-// Get KPIs from v_nps_summary
+// Get KPIs from direct query (fallback if RPC doesn't exist)
 async function getKpis(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    const { data, error } = await supabase.rpc('get_nps_summary', {
+    // Try RPC first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_nps_summary', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
       p_title: params.title ?? null,
     });
+    
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      return rpcData[0];
+    }
+    
+    // Fallback to direct query
+    console.log('RPC failed, using direct query fallback');
+    let query = supabase
+      .from('nps_response')
+      .select('nps_score, nps_category')
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
+    
+    if (params.survey) {
+      query = query.eq('survey_name', params.survey);
+    }
+    if (params.title) {
+      query = query.eq('title_text', params.title);
+    }
+    
+    const { data, error } = await query;
     if (error) {
-      console.error('Error fetching NPS summary:', error);
+      console.error('Error fetching NPS data:', error);
       return { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
     }
-    return data[0] || { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
+    
+    const total = data?.length || 0;
+    const promoters = data?.filter(r => r.nps_category === 'promoter').length || 0;
+    const passives = data?.filter(r => r.nps_category === 'passive').length || 0;
+    const detractors = data?.filter(r => r.nps_category === 'detractor').length || 0;
+    const current_nps = total > 0 ? ((promoters - detractors) / total) * 100 : 0;
+    const avg_score = total > 0 ? data?.reduce((sum, r) => sum + (r.nps_score || 0), 0) / total : 0;
+    
+    return { current_nps, total_responses: total, promoters, passives, detractors, avg_score };
   } catch (error) {
     console.error('Error in getKpis:', error);
     return { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
   }
 }
 
-// Get Movers from top_title_mom_moves
+// Get Movers from top_title_mom_moves (with fallback)
 async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    const { data, error } = await supabase.rpc('top_title_mom_moves', {
+    // Try RPC first
+    const { data: rpcData, error: rpcError } = await supabase.rpc('top_title_mom_moves', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
@@ -53,20 +84,24 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_min_responses: 30,
       p_top_k: 5
     });
-    if (error) {
-      console.error('Error fetching MoM moves:', error);
-      return [];
+    
+    if (!rpcError && rpcData) {
+      return rpcData;
     }
-    return data || [];
+    
+    // Fallback: return empty array for now (would need complex month-over-month calculation)
+    console.log('RPC failed for movers, returning empty array');
+    return [];
   } catch (error) {
     console.error('Error in getMovers:', error);
     return [];
   }
 }
 
-// Get Top Themes for Promoters and Detractors
+// Get Top Themes for Promoters and Detractors (with fallback)
 async function getTopThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
+    // Try RPC first
     const [promoterData, detractorData] = await Promise.all([
       supabase.rpc('themes_aggregate', {
         p_start_date: params.start ?? null,
@@ -84,45 +119,51 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
       })
     ]);
 
-    const promoters = promoterData.data?.slice(0, 3) || [];
-    const detractors = detractorData.data?.slice(0, 3) || [];
+    if (!promoterData.error && !detractorData.error) {
+      const promoters = promoterData.data?.slice(0, 3) || [];
+      const detractors = detractorData.data?.slice(0, 3) || [];
 
-    // Get sample quotes for each theme
-    const promoterThemes = await Promise.all(
-      promoters.map(async (theme: any) => {
-        const { data: quoteData } = await supabase
-          .from('nps_response')
-          .select('nps_explanation')
-          .eq('nps_category', 'promoter')
-          .contains('nps_ai_enrichment.themes', [theme.theme])
-          .not('nps_explanation', 'is', null)
-          .limit(1);
-        
-        return {
-          ...theme,
-          sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
-        };
-      })
-    );
+      // Get sample quotes for each theme
+      const promoterThemes = await Promise.all(
+        promoters.map(async (theme: any) => {
+          const { data: quoteData } = await supabase
+            .from('nps_response')
+            .select('nps_explanation')
+            .eq('nps_category', 'promoter')
+            .contains('nps_ai_enrichment.themes', [theme.theme])
+            .not('nps_explanation', 'is', null)
+            .limit(1);
+          
+          return {
+            ...theme,
+            sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+          };
+        })
+      );
 
-    const detractorThemes = await Promise.all(
-      detractors.map(async (theme: any) => {
-        const { data: quoteData } = await supabase
-          .from('nps_response')
-          .select('nps_explanation')
-          .eq('nps_category', 'detractor')
-          .contains('nps_ai_enrichment.themes', [theme.theme])
-          .not('nps_explanation', 'is', null)
-          .limit(1);
-        
-        return {
-          ...theme,
-          sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
-        };
-      })
-    );
+      const detractorThemes = await Promise.all(
+        detractors.map(async (theme: any) => {
+          const { data: quoteData } = await supabase
+            .from('nps_response')
+            .select('nps_explanation')
+            .eq('nps_category', 'detractor')
+            .contains('nps_ai_enrichment.themes', [theme.theme])
+            .not('nps_explanation', 'is', null)
+            .limit(1);
+          
+          return {
+            ...theme,
+            sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+          };
+        })
+      );
 
-    return { promoterThemes, detractorThemes };
+      return { promoterThemes, detractorThemes };
+    }
+    
+    // Fallback: return empty arrays
+    console.log('RPC failed for themes, returning empty arrays');
+    return { promoterThemes: [], detractorThemes: [] };
   } catch (error) {
     console.error('Error in getTopThemes:', error);
     return { promoterThemes: [], detractorThemes: [] };
@@ -197,8 +238,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">NPS Insights</h1>
           <p className="text-muted-foreground">
@@ -403,7 +443,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className="text-sm text-muted-foreground text-right">
           In deze periode: {coverage.total} reacties • {coverage.withComments}% met opmerking • {coverage.enriched}% geclassificeerd.
         </div>
-      </div>
     </div>
   );
 }

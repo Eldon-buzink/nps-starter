@@ -122,8 +122,7 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Thema Analyse</h1>
           <p className="text-muted-foreground">
@@ -288,7 +287,6 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 }

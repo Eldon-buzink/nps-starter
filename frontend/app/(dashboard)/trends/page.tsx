@@ -325,8 +325,7 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">NPS Trends</h1>
           <p className="text-muted-foreground">
@@ -407,7 +406,6 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }

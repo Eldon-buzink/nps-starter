@@ -132,7 +132,27 @@ export default function SettingsPage() {
             <Progress value={73} className="w-full" />
           </div>
           
-          <Button className="w-full" variant="outline">
+          <Button 
+            className="w-full" 
+            variant="outline"
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/enrich', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ batch_size: 100 })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                  alert(`Enrichment started! ${result.processed} responses processed.`);
+                } else {
+                  alert(`Error: ${result.error}`);
+                }
+              } catch (error) {
+                alert(`Error: ${error}`);
+              }
+            }}
+          >
             Run Enrichment Now
           </Button>
           
