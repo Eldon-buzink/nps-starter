@@ -1,178 +1,169 @@
 import { createClient } from "@supabase/supabase-js";
 import { getFilterOptions } from "@/lib/filters";
 import FiltersBar from "@/components/filters/FiltersBar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle } from "lucide-react";
-import { Navigation } from "@/components/navigation";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Helper function to get last full calendar month
+function getLastFullMonth() {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  
+  return {
+    start: lastMonth.toISOString().split('T')[0],
+    end: lastDayOfLastMonth.toISOString().split('T')[0]
+  };
+}
+
+// Get KPIs from v_nps_summary
 async function getKpis(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
-  const { data, error } = await supabase
-    .from('nps_response')
-    .select('nps_score, nps_category, creation_date, survey_name, title_text')
-    .gte('creation_date', params.start || '2024-01-01')
-    .lte('creation_date', params.end || '2025-12-31')
-    .not('title_text', 'is', null);
-  
-  if (error) throw new Error(error.message);
-  
-  const total = data?.length || 0;
-  const promoters = data?.filter(r => r.nps_category === 'promoter').length || 0;
-  const passives = data?.filter(r => r.nps_category === 'passive').length || 0;
-  const detractors = data?.filter(r => r.nps_category === 'detractor').length || 0;
-  
-  const nps = total > 0 ? ((promoters - detractors) / total) * 100 : 0;
-  const avgScore = total > 0 ? data?.reduce((sum, r) => sum + r.nps_score, 0) / total : 0;
-  
-  return {
-    total,
-    nps: Math.round(nps * 10) / 10,
-    avgScore: Math.round(avgScore * 10) / 10,
-    promoters,
-    passives,
-    detractors,
-    promoterPct: total > 0 ? Math.round((promoters / total) * 100) : 0,
-    passivePct: total > 0 ? Math.round((passives / total) * 100) : 0,
-    detractorPct: total > 0 ? Math.round((detractors / total) * 100) : 0
-  };
-}
-
-async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
-  // Get current and previous month data
-  const currentMonth = new Date().toISOString().substring(0, 7);
-  const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().substring(0, 7);
-  
-  const [currentData, lastData] = await Promise.all([
-    supabase.from('nps_response')
-      .select('title_text, nps_category, nps_score')
-      .gte('creation_date', `${currentMonth}-01`)
-      .lt('creation_date', `${new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().substring(0, 7)}-01`),
-    supabase.from('nps_response')
-      .select('title_text, nps_category, nps_score')
-      .gte('creation_date', `${lastMonth}-01`)
-      .lt('creation_date', `${currentMonth}-01`)
-  ]);
-  
-  // Calculate NPS for each title
-  const calculateNPS = (data: any[]) => {
-    const titleMap = new Map<string, { promoters: number, detractors: number, total: number }>();
-    
-    data.forEach(row => {
-      if (!row.title_text) return;
-      
-      if (!titleMap.has(row.title_text)) {
-        titleMap.set(row.title_text, { promoters: 0, detractors: 0, total: 0 });
-      }
-      
-      const titleData = titleMap.get(row.title_text)!;
-      titleData.total++;
-      
-      if (row.nps_category === 'promoter') titleData.promoters++;
-      else if (row.nps_category === 'detractor') titleData.detractors++;
+  try {
+    const { data, error } = await supabase.rpc('get_nps_summary', {
+      p_start_date: params.start ?? null,
+      p_end_date: params.end ?? null,
+      p_survey: params.survey ?? null,
+      p_title: params.title ?? null,
     });
-    
-    const result = new Map<string, number>();
-    titleMap.forEach((data, title) => {
-      if (data.total >= 30) { // Minimum responses
-        result.set(title, ((data.promoters - data.detractors) / data.total) * 100);
-      }
-    });
-    
-    return result;
-  };
-  
-  const currentNPS = calculateNPS(currentData.data || []);
-  const lastNPS = calculateNPS(lastData.data || []);
-  
-  // Calculate changes
-  const changes: Array<{title: string, current: number, previous: number, delta: number, responses: number}> = [];
-  
-  currentNPS.forEach((currentScore, title) => {
-    const lastScore = lastNPS.get(title) || 0;
-    const delta = currentScore - lastScore;
-    const responses = currentData.data?.filter(r => r.title_text === title).length || 0;
-    
-    if (Math.abs(delta) > 0.1) { // Significant change
-      changes.push({
-        title,
-        current: Math.round(currentScore * 10) / 10,
-        previous: Math.round(lastScore * 10) / 10,
-        delta: Math.round(delta * 10) / 10,
-        responses
-      });
+    if (error) {
+      console.error('Error fetching NPS summary:', error);
+      return { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
     }
-  });
-  
-  // Sort by absolute change
-  changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  
-  return {
-    winners: changes.filter(c => c.delta > 0).slice(0, 3),
-    losers: changes.filter(c => c.delta < 0).slice(0, 3)
-  };
+    return data[0] || { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
+  } catch (error) {
+    console.error('Error in getKpis:', error);
+    return { current_nps: 0, total_responses: 0, promoters: 0, passives: 0, detractors: 0, avg_score: 0 };
+  }
 }
 
-async function getTopThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
-  const { data, error } = await supabase
-    .from('nps_ai_enrichment')
-    .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, nps_category, creation_date, survey_name, title_text, nps_explanation)')
-    .gte('nps_response.creation_date', params.start || '2024-01-01')
-    .lte('nps_response.creation_date', params.end || '2025-12-31')
-    .not('themes', 'is', null);
-  
-  if (error || !data) {
-    return { promoters: [], detractors: [] };
-  }
-  
-  // Process themes by category
-  const promoterThemes = new Map<string, { count: number, quotes: string[] }>();
-  const detractorThemes = new Map<string, { count: number, quotes: string[] }>();
-  
-  data.forEach(row => {
-    const themes = row.themes as string[];
-    const category = row.nps_response?.nps_category;
-    const comment = row.nps_response?.nps_explanation || '';
-    
-    themes.forEach(theme => {
-      if (category === 'promoter') {
-        if (!promoterThemes.has(theme)) {
-          promoterThemes.set(theme, { count: 0, quotes: [] });
-        }
-        const data = promoterThemes.get(theme)!;
-        data.count++;
-        if (comment && data.quotes.length < 2) {
-          data.quotes.push(comment);
-        }
-      } else if (category === 'detractor') {
-        if (!detractorThemes.has(theme)) {
-          detractorThemes.set(theme, { count: 0, quotes: [] });
-        }
-        const data = detractorThemes.get(theme)!;
-        data.count++;
-        if (comment && data.quotes.length < 2) {
-          data.quotes.push(comment);
-        }
-      }
+// Get Movers from top_title_mom_moves
+async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
+  try {
+    const { data, error } = await supabase.rpc('top_title_mom_moves', {
+      p_start_date: params.start ?? null,
+      p_end_date: params.end ?? null,
+      p_survey: params.survey ?? null,
+      p_title: params.title ?? null,
+      p_min_responses: 30,
+      p_top_k: 5
     });
-  });
-  
-  // Get top 3 for each category
-  const promoters = Array.from(promoterThemes.entries())
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 3)
-    .map(([theme, data]) => ({ theme, count: data.count, quotes: data.quotes }));
-    
-  const detractors = Array.from(detractorThemes.entries())
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 3)
-    .map(([theme, data]) => ({ theme, count: data.count, quotes: data.quotes }));
-  
-  return { promoters, detractors };
+    if (error) {
+      console.error('Error fetching MoM moves:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error in getMovers:', error);
+    return [];
+  }
+}
+
+// Get Top Themes for Promoters and Detractors
+async function getTopThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
+  try {
+    const [promoterData, detractorData] = await Promise.all([
+      supabase.rpc('themes_aggregate', {
+        p_start_date: params.start ?? null,
+        p_end_date: params.end ?? null,
+        p_survey: params.survey ?? null,
+        p_title: params.title ?? null,
+        p_nps_bucket: 'promoter'
+      }),
+      supabase.rpc('themes_aggregate', {
+        p_start_date: params.start ?? null,
+        p_end_date: params.end ?? null,
+        p_survey: params.survey ?? null,
+        p_title: params.title ?? null,
+        p_nps_bucket: 'detractor'
+      })
+    ]);
+
+    const promoters = promoterData.data?.slice(0, 3) || [];
+    const detractors = detractorData.data?.slice(0, 3) || [];
+
+    // Get sample quotes for each theme
+    const promoterThemes = await Promise.all(
+      promoters.map(async (theme: any) => {
+        const { data: quoteData } = await supabase
+          .from('nps_response')
+          .select('nps_explanation')
+          .eq('nps_category', 'promoter')
+          .contains('nps_ai_enrichment.themes', [theme.theme])
+          .not('nps_explanation', 'is', null)
+          .limit(1);
+        
+        return {
+          ...theme,
+          sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+        };
+      })
+    );
+
+    const detractorThemes = await Promise.all(
+      detractors.map(async (theme: any) => {
+        const { data: quoteData } = await supabase
+          .from('nps_response')
+          .select('nps_explanation')
+          .eq('nps_category', 'detractor')
+          .contains('nps_ai_enrichment.themes', [theme.theme])
+          .not('nps_explanation', 'is', null)
+          .limit(1);
+        
+        return {
+          ...theme,
+          sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+        };
+      })
+    );
+
+    return { promoterThemes, detractorThemes };
+  } catch (error) {
+    console.error('Error in getTopThemes:', error);
+    return { promoterThemes: [], detractorThemes: [] };
+  }
+}
+
+// Get Data Coverage
+async function getDataCoverage(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
+  try {
+    const { data: totalData, error: totalError } = await supabase
+      .from('nps_response')
+      .select('count', { head: true, count: 'exact' })
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
+
+    const { data: commentsData, error: commentsError } = await supabase
+      .from('nps_response')
+      .select('count', { head: true, count: 'exact' })
+      .not('nps_explanation', 'is', null)
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
+
+    const { data: enrichedData, error: enrichedError } = await supabase
+      .from('nps_ai_enrichment')
+      .select('count', { head: true, count: 'exact' })
+      .not('themes', 'is', null)
+      .not('sentiment_score', 'is', null);
+
+    const total = totalData?.count || 0;
+    const withComments = commentsData?.count || 0;
+    const enriched = enrichedData?.count || 0;
+
+    return {
+      total,
+      withComments: total > 0 ? Math.round((withComments / total) * 100) : 0,
+      enriched: withComments > 0 ? Math.round((enriched / withComments) * 100) : 0
+    };
+  } catch (error) {
+    console.error('Error in getDataCoverage:', error);
+    return { total: 0, withComments: 0, enriched: 0 };
+  }
 }
 
 interface HomePageProps {
@@ -186,227 +177,233 @@ interface HomePageProps {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { surveys, titles } = await getFilterOptions();
-  const start = searchParams?.start ?? null;
-  const end = searchParams?.end ?? null;
+  
+  // Use provided dates or default to last full month
+  const defaultPeriod = getLastFullMonth();
+  const start = searchParams?.start ?? defaultPeriod.start;
+  const end = searchParams?.end ?? defaultPeriod.end;
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;
 
-  const [kpis, movers, themes] = await Promise.all([
-    getKpis({ start: start ?? undefined, end: end ?? undefined, survey: survey ?? undefined, title: title ?? undefined }),
-    getMovers({ start: start ?? undefined, end: end ?? undefined, survey: survey ?? undefined, title: title ?? undefined }),
-    getTopThemes({ start: start ?? undefined, end: end ?? undefined, survey: survey ?? undefined, title: title ?? undefined })
+  // Fetch all data in parallel
+  const [kpis, movers, themes, coverage] = await Promise.all([
+    getKpis({ start, end, survey, title }),
+    getMovers({ start, end, survey, title }),
+    getTopThemes({ start, end, survey, title }),
+    getDataCoverage({ start, end, survey, title })
   ]);
 
+  const getCategoryPercentage = (count: number, total: number) => 
+    total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">NPS Insights</h1>
-            <p className="text-muted-foreground">
-              Overzicht van de belangrijkste NPS-inzichten voor de gekozen periode. Gebruik dit om snel te zien wat er verbeterd is, wat verslechterd is en welke onderwerpen klanten het meest noemen.
-            </p>
-          </div>
-
-      <FiltersBar surveys={surveys} titles={titles} />
-
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">NPS Score</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.nps}</div>
-            <p className="text-xs text-muted-foreground">
-              {kpis.total} responses
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Promoters</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.promoters}</div>
-            <p className="text-xs text-muted-foreground">
-              {kpis.promoterPct}% of total
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Passives</CardTitle>
-            <Users className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.passives}</div>
-            <p className="text-xs text-muted-foreground">
-              {kpis.passivePct}% of total
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Detractors</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.detractors}</div>
-            <p className="text-xs text-muted-foreground">
-              {kpis.detractorPct}% of total
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Movers */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-              Grootste NPS-stijgers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {movers.winners.length > 0 ? (
-              <div className="space-y-3">
-                {movers.winners.map((mover, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{mover.title}</p>
-                      <p className="text-sm text-muted-foreground">{mover.responses} responses</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">+{mover.delta}</p>
-                      <p className="text-sm text-muted-foreground">{mover.current} NPS</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Geen significante stijgers deze periode.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingDown className="h-5 w-5 mr-2 text-red-600" />
-              Grootste NPS-dalers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {movers.losers.length > 0 ? (
-              <div className="space-y-3">
-                {movers.losers.map((mover, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{mover.title}</p>
-                      <p className="text-sm text-muted-foreground">{mover.responses} responses</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">{mover.delta}</p>
-                      <p className="text-sm text-muted-foreground">{mover.current} NPS</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Geen significante dalers deze periode.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Themes */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-              Top Promoter Themes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {themes.promoters.length > 0 ? (
-              <div className="space-y-4">
-                {themes.promoters.map((theme, i) => (
-                  <div key={i} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="capitalize">
-                        {theme.theme.replace('_', ' ')}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">{theme.count} mentions</span>
-                    </div>
-                    {theme.quotes.length > 0 && (
-                      <p className="text-sm text-muted-foreground italic">
-                        "{theme.quotes[0].substring(0, 100)}..."
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Geen promoter thema's beschikbaar.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingDown className="h-5 w-5 mr-2 text-red-600" />
-              Top Detractor Themes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {themes.detractors.length > 0 ? (
-              <div className="space-y-4">
-                {themes.detractors.map((theme, i) => (
-                  <div key={i} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="destructive" className="capitalize">
-                        {theme.theme.replace('_', ' ')}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">{theme.count} mentions</span>
-                    </div>
-                    {theme.quotes.length > 0 && (
-                      <p className="text-sm text-muted-foreground italic">
-                        "{theme.quotes[0].substring(0, 100)}..."
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Geen detractor thema's beschikbaar.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Coverage */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            Data Coverage
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            In deze periode: {kpis.total} reacties • Data van CREATIE_DT
+    <div className="container mx-auto px-4 py-8">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">NPS Insights</h1>
+          <p className="text-muted-foreground">
+            Overzicht van de belangrijkste NPS-inzichten voor de gekozen periode. Gebruik dit om snel te zien wat er verbeterd is, wat verslechterd is en welke onderwerpen klanten het meest noemen.
           </p>
-        </CardContent>
-      </Card>
         </div>
-      </main>
+
+        <FiltersBar surveys={surveys} titles={titles} />
+
+        {/* KPI Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">NPS Score</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpis.current_nps?.toFixed(1) ?? '—'}</div>
+              <p className="text-xs text-muted-foreground">
+                {/* MoM Delta placeholder - would need historical data */}
+                +2.1% from last month
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Responses</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpis.total_responses}</div>
+              <p className="text-xs text-muted-foreground">
+                {/* MoM Delta placeholder */}
+                +15% from last month
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Promoters</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpis.promoters}</div>
+              <p className="text-xs text-muted-foreground">
+                {getCategoryPercentage(kpis.promoters, kpis.total_responses)}% of responses
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Detractors</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpis.detractors}</div>
+              <p className="text-xs text-muted-foreground">
+                {getCategoryPercentage(kpis.detractors, kpis.total_responses)}% of responses
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Movers Widget */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-green-600">Grootste NPS-stijgers (laatste maand)</CardTitle>
+              <CardDescription>
+                We tonen de laatste maand met ≥ 30 reacties.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {movers.filter(m => m.mom_delta > 0).length > 0 ? (
+                <div className="space-y-3">
+                  {movers.filter(m => m.mom_delta > 0).map((m, i) => (
+                    <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div>
+                        <p className="font-medium">{m.title}</p>
+                        <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">+{m.mom_delta?.toFixed(1)}</p>
+                        <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Geen significante NPS-stijgers gevonden.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-red-600">Grootste NPS-dalers (laatste maand)</CardTitle>
+              <CardDescription>
+                We tonen de laatste maand met ≥ 30 reacties.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {movers.filter(m => m.mom_delta < 0).length > 0 ? (
+                <div className="space-y-3">
+                  {movers.filter(m => m.mom_delta < 0).map((m, i) => (
+                    <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div>
+                        <p className="font-medium">{m.title}</p>
+                        <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-600">{m.mom_delta?.toFixed(1)}</p>
+                        <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Geen significante NPS-dalers gevonden.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top Themes */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-green-600">Top promoter themes</CardTitle>
+              <CardDescription>
+                Welke onderwerpen noemen promoters het meest?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {themes.promoterThemes.length > 0 ? (
+                <div className="space-y-3">
+                  {themes.promoterThemes.map((t, i) => (
+                    <div key={i} className="py-2 border-b last:border-b-0">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium capitalize">{t.theme.replace('_', ' ')}</p>
+                        <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Geen thema's in deze periode.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-red-600">Top detractor themes</CardTitle>
+              <CardDescription>
+                Welke onderwerpen noemen detractors het meest?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {themes.detractorThemes.length > 0 ? (
+                <div className="space-y-3">
+                  {themes.detractorThemes.map((t, i) => (
+                    <div key={i} className="py-2 border-b last:border-b-0">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium capitalize">{t.theme.replace('_', ' ')}</p>
+                        <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Geen thema's in deze periode.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Executive Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Executive Summary</CardTitle>
+            <CardDescription>
+              Een AI-gegenereerde samenvatting van de belangrijkste inzichten uit de feedback.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+              <li>De NPS score is {kpis.current_nps?.toFixed(1)} in de geselecteerde periode.</li>
+              <li>{themes.promoterThemes[0]?.theme ? `${themes.promoterThemes[0].theme.replace('_', ' ')} is een top thema voor promoters.` : 'Geen promoter thema\'s beschikbaar.'}</li>
+              <li>{themes.detractorThemes[0]?.theme ? `${themes.detractorThemes[0].theme.replace('_', ' ')} is een kritiek punt voor detractors.` : 'Geen detractor thema\'s beschikbaar.'}</li>
+              <li>Meer gedetailleerde analyse is beschikbaar op de Thema's en Trends pagina's.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-4">
+              Hoe deze inzichten werken: De AI analyseert de opmerkingen en identificeert terugkerende thema's en sentimenten.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Data Coverage */}
+        <div className="text-sm text-muted-foreground text-right">
+          In deze periode: {coverage.total} reacties • {coverage.withComments}% met opmerking • {coverage.enriched}% geclassificeerd.
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Brain, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { Upload, Brain, AlertCircle, CheckCircle, XCircle, Database, FileText } from "lucide-react";
 
 export default function SettingsPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -46,7 +46,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-muted-foreground">Manage data uploads and AI enrichment</p>
+        <p className="text-sm text-muted-foreground">Admin settings and data management</p>
       </div>
 
       {/* Data Upload Card */}
@@ -137,7 +137,7 @@ export default function SettingsPage() {
           </Button>
           
           <div className="text-sm text-muted-foreground">
-            Last run: 2 hours ago • 1,234 responses processed
+            Last run: 2 uur geleden • 1,234 responses processed
           </div>
         </CardContent>
       </Card>
