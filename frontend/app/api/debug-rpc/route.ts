@@ -25,19 +25,19 @@ export async function GET() {
     
     console.log('Total responses:', { totalResponses, countError });
     
-    // Test 3: Check responses in 2024
-    const { count: responses2024, error: count2024Error } = await supabase
+    // Test 3: Check responses in 2025
+    const { count: responses2025, error: count2025Error } = await supabase
       .from('nps_response')
       .select('*', { count: 'exact', head: true })
-      .gte('created_at', '2024-01-01')
-      .lte('created_at', '2024-12-31');
+      .gte('created_at', '2025-01-01')
+      .lte('created_at', '2025-12-31');
     
-    console.log('Responses in 2024:', { responses2024, count2024Error });
+    console.log('Responses in 2025:', { responses2025, count2025Error });
     
     // Test 4: Try the v_nps_summary RPC
     const { data: summaryData, error: summaryError } = await supabase.rpc('v_nps_summary', {
-      p_start: '2024-01-01',
-      p_end: '2024-12-31',
+      p_start: '2025-01-01',
+      p_end: '2025-12-31',
       p_survey: null,
       p_title: null
     });
@@ -55,12 +55,12 @@ export async function GET() {
       success: true,
       results: {
         totalResponses,
-        responses2024,
+        responses2025,
         summaryData,
         enrichmentCount,
         errors: {
           countError,
-          count2024Error,
+          count2025Error,
           summaryError,
           enrichmentError
         }

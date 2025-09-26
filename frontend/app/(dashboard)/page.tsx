@@ -35,7 +35,15 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     });
     
     if (!rpcError && rpcData && rpcData.length > 0) {
-      return rpcData[0];
+      const summary = rpcData[0];
+      return {
+        current_nps: summary.nps || 0,
+        total_responses: summary.responses || 0,
+        promoters: summary.promoters || 0,
+        passives: summary.passives || 0,
+        detractors: summary.detractors || 0,
+        avg_score: 0 // RPC doesn't return avg_score
+      };
     }
     
     // Fallback to direct query
@@ -177,15 +185,15 @@ async function getDataCoverage(params: {start?:string,end?:string,survey?:string
     const { data: totalData, error: totalError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2025-01-01')
+      .lte('created_at', params.end || '2025-12-31');
 
     const { data: commentsData, error: commentsError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
       .not('nps_explanation', 'is', null)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2025-01-01')
+      .lte('created_at', params.end || '2025-12-31');
 
     const { data: enrichedData, error: enrichedError } = await supabase
       .from('nps_ai_enrichment')
