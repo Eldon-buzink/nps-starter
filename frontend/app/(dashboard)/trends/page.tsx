@@ -13,13 +13,14 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
+  // Use current month since data is from 2025-09-23
   const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   
   return {
-    start: lastMonth.toISOString().split('T')[0],
-    end: lastDayOfLastMonth.toISOString().split('T')[0]
+    start: currentMonth.toISOString().split('T')[0],
+    end: lastDayOfCurrentMonth.toISOString().split('T')[0]
   };
 }
 
@@ -27,9 +28,9 @@ function getLastFullMonth() {
 async function getOverallTrends(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
     // Try RPC first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('nps_trend_by_title_with_mom', {
-      p_start_date: params.start ?? null,
-      p_end_date: params.end ?? null,
+    const { data: rpcData, error: rpcError } = await supabase.rpc('nps_trend_overall', {
+      p_start: params.start ?? null,
+      p_end: params.end ?? null,
       p_survey: params.survey ?? null,
       p_title: params.title ?? null,
     });
