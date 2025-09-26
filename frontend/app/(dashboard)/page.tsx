@@ -330,16 +330,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {movers.filter(m => m.mom_delta > 0).length > 0 ? (
+              {movers.filter(m => m.delta > 0).length > 0 ? (
                 <div className="space-y-3">
-                  {movers.filter(m => m.mom_delta > 0).map((m, i) => (
+                  {movers.filter(m => m.delta > 0).map((m, i) => (
                     <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div>
-                        <p className="font-medium">{m.title}</p>
+                        <p className="font-medium">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-600">+{m.mom_delta?.toFixed(1)}</p>
+                        <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
                         <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
                       </div>
                     </div>
@@ -359,16 +359,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {movers.filter(m => m.mom_delta < 0).length > 0 ? (
+              {movers.filter(m => m.delta < 0).length > 0 ? (
                 <div className="space-y-3">
-                  {movers.filter(m => m.mom_delta < 0).map((m, i) => (
+                  {movers.filter(m => m.delta < 0).map((m, i) => (
                     <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div>
-                        <p className="font-medium">{m.title}</p>
+                        <p className="font-medium">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-red-600">{m.mom_delta?.toFixed(1)}</p>
+                        <p className="font-bold text-red-600">{m.delta?.toFixed(1)}</p>
                         <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
                       </div>
                     </div>
