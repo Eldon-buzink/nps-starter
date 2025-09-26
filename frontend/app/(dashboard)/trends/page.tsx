@@ -13,14 +13,10 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
-  // Use current month since data is from 2025-09-23
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+  // Use full dataset range (2024-2025)
   return {
-    start: currentMonth.toISOString().split('T')[0],
-    end: lastDayOfCurrentMonth.toISOString().split('T')[0]
+    start: "2024-01-01",
+    end: "2025-12-31"
   };
 }
 

@@ -173,7 +173,7 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   const { surveys, titles } = await getFilterOptions();
   
   // Use provided dates or default to 2024 (your actual data period)
-  const start = searchParams?.start ?? '2025-01-01';
+  const start = searchParams?.start ?? '2024-01-01';
   const end = searchParams?.end ?? '2025-12-31';
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;

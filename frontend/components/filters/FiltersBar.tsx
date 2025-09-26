@@ -19,8 +19,8 @@ export default function FiltersBar({
   // Set default period to cover 2024 data if no dates provided
   useEffect(() => {
     if (!start && !end) {
-      // Set to cover 2025 data (your actual data period)
-      setStart("2025-01-01");
+      // Set to cover full dataset (2024-2025)
+      setStart("2024-01-01");
       setEnd("2025-12-31");
     }
   }, [start, end]);
