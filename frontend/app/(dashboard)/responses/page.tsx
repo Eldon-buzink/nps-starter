@@ -43,11 +43,10 @@ async function getResponses(params: {
       .from('nps_response')
       .select(`
         id,
-        creation_date,
+        created_at,
         title_text,
         survey_name,
         nps_score,
-        nps_category,
         nps_explanation,
         nps_ai_enrichment (
           themes,
@@ -55,9 +54,9 @@ async function getResponses(params: {
           sentiment_label
         )
       `)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31')
-      .order('creation_date', { ascending: false });
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2024-12-31')
+      .order('created_at', { ascending: false });
 
     // Apply filters
     if (params.survey) {
@@ -67,7 +66,13 @@ async function getResponses(params: {
       query = query.eq('title_text', params.title);
     }
     if (params.nps_bucket) {
-      query = query.eq('nps_category', params.nps_bucket);
+      if (params.nps_bucket === 'promoter') {
+        query = query.gte('nps_score', 9);
+      } else if (params.nps_bucket === 'passive') {
+        query = query.gte('nps_score', 7).lte('nps_score', 8);
+      } else if (params.nps_bucket === 'detractor') {
+        query = query.lte('nps_score', 6);
+      }
     }
     if (params.search) {
       query = query.ilike('nps_explanation', `%${params.search}%`);
