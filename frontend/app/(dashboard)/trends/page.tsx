@@ -42,9 +42,9 @@ async function getOverallTrends(params: {start?:string,end?:string,survey?:strin
     console.log('RPC failed, using direct query fallback for trends');
     const { data, error } = await supabase
       .from('nps_response')
-      .select('creation_date, title_text, nps_score')
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2024-12-31')
+      .select('created_at, title_text, nps_score')
+          .gte('created_at', params.start || '2025-01-01')
+          .lte('created_at', params.end || '2025-12-31')
       .not('title_text', 'is', null);
     
     if (error) {

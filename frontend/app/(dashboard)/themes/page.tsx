@@ -31,8 +31,8 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
     const { data, error } = await supabase
       .from('nps_ai_enrichment')
       .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, creation_date, survey_name, title_text)')
-      .gte('nps_response.creation_date', params.start || '2024-01-01')
-      .lte('nps_response.creation_date', params.end || '2024-12-31')
+                  .gte('nps_response.created_at', params.start || '2025-01-01')
+                  .lte('nps_response.created_at', params.end || '2025-12-31')
       .not('themes', 'is', null);
     
     console.log('Themes query result:', { dataCount: data?.length, error });
@@ -86,8 +86,8 @@ async function getPromoterDetractorData(params: {start?:string,end?:string,surve
     const { data, error } = await supabase
       .from('nps_ai_enrichment')
       .select('themes, promoter_flag, detractor_flag, nps_response!inner(creation_date, survey_name, title_text)')
-      .gte('nps_response.creation_date', params.start || '2024-01-01')
-      .lte('nps_response.creation_date', params.end || '2024-12-31')
+                  .gte('nps_response.created_at', params.start || '2025-01-01')
+                  .lte('nps_response.created_at', params.end || '2025-12-31')
       .not('themes', 'is', null);
     
     if (error) {
@@ -173,8 +173,8 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   const { surveys, titles } = await getFilterOptions();
   
   // Use provided dates or default to 2024 (your actual data period)
-  const start = searchParams?.start ?? '2024-01-01';
-  const end = searchParams?.end ?? '2024-12-31';
+  const start = searchParams?.start ?? '2025-01-01';
+  const end = searchParams?.end ?? '2025-12-31';
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;
 

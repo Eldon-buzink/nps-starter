@@ -12,13 +12,14 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
+  // Use current month since data is from 2025-09-23
   const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   
   return {
-    start: lastMonth.toISOString().split('T')[0],
-    end: lastDayOfLastMonth.toISOString().split('T')[0]
+    start: currentMonth.toISOString().split('T')[0],
+    end: lastDayOfCurrentMonth.toISOString().split('T')[0]
   };
 }
 
@@ -42,8 +43,8 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     let query = supabase
       .from('nps_response')
       .select('nps_score')
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2024-12-31');
+      .gte('created_at', params.start || '2025-01-01')
+      .lte('created_at', params.end || '2025-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
