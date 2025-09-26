@@ -172,19 +172,26 @@ interface ThemesPageProps {
 export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   const { surveys, titles } = await getFilterOptions();
   
-  // Use provided dates or default to last full month
-  const defaultPeriod = getLastFullMonth();
-  const start = searchParams?.start ?? defaultPeriod.start;
-  const end = searchParams?.end ?? defaultPeriod.end;
+  // Use provided dates or default to 2024 (your actual data period)
+  const start = searchParams?.start ?? '2024-01-01';
+  const end = searchParams?.end ?? '2024-12-31';
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;
 
+  console.log('ThemesPage: Fetching data with params:', { start, end, survey, title });
+  
   // Fetch all data in parallel
   const [themes, promoterDetractorData, sparklineData] = await Promise.all([
     getThemes({ start, end, survey, title }),
     getPromoterDetractorData({ start, end, survey, title }),
     getTopThemesForSparklines({ start, end, survey, title })
   ]);
+  
+  console.log('ThemesPage: Results:', {
+    themesCount: themes.length,
+    promoterDetractorCount: promoterDetractorData.length,
+    sparklineDataCount: sparklineData.length
+  });
 
   return (
     <div className="space-y-6">
