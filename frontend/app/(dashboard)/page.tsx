@@ -26,9 +26,9 @@ function getLastFullMonth() {
 async function getKpis(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
     // Try RPC first
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_nps_summary', {
-      p_start_date: params.start ?? null,
-      p_end_date: params.end ?? null,
+    const { data: rpcData, error: rpcError } = await supabase.rpc('v_nps_summary', {
+      p_start: params.start ?? null,
+      p_end: params.end ?? null,
       p_survey: params.survey ?? null,
       p_title: params.title ?? null,
     });
@@ -42,8 +42,8 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     let query = supabase
       .from('nps_response')
       .select('nps_score')
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2024-12-31');
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2024-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -59,9 +59,9 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     }
     
     const total = data?.length || 0;
-    const promoters = data?.filter(r => r.nps_category === 'promoter').length || 0;
-    const passives = data?.filter(r => r.nps_category === 'passive').length || 0;
-    const detractors = data?.filter(r => r.nps_category === 'detractor').length || 0;
+    const promoters = data?.filter(r => r.nps_score >= 9).length || 0;
+    const passives = data?.filter(r => r.nps_score >= 7 && r.nps_score <= 8).length || 0;
+    const detractors = data?.filter(r => r.nps_score <= 6).length || 0;
     const current_nps = total > 0 ? ((promoters - detractors) / total) * 100 : 0;
     const avg_score = total > 0 ? data?.reduce((sum, r) => sum + (r.nps_score || 0), 0) / total : 0;
     
@@ -129,7 +129,7 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
           const { data: quoteData } = await supabase
             .from('nps_response')
             .select('nps_explanation')
-            .eq('nps_category', 'promoter')
+            .gte('nps_score', 9)
             .contains('nps_ai_enrichment.themes', [theme.theme])
             .not('nps_explanation', 'is', null)
             .limit(1);
@@ -146,7 +146,7 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
           const { data: quoteData } = await supabase
             .from('nps_response')
             .select('nps_explanation')
-            .eq('nps_category', 'detractor')
+            .lte('nps_score', 6)
             .contains('nps_ai_enrichment.themes', [theme.theme])
             .not('nps_explanation', 'is', null)
             .limit(1);
@@ -226,6 +226,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;
 
+  console.log('HomePage: Fetching data with params:', { start, end, survey, title });
+  
   // Fetch all data in parallel
   const [kpis, movers, themes, coverage] = await Promise.all([
     getKpis({ start, end, survey, title }),
@@ -233,6 +235,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     getTopThemes({ start, end, survey, title }),
     getDataCoverage({ start, end, survey, title })
   ]);
+  
+  console.log('HomePage: Results:', {
+    kpis: kpis ? 'found' : 'null',
+    moversCount: movers?.length || 0,
+    themesCount: themes?.length || 0,
+    coverage: coverage ? 'found' : 'null'
+  });
 
   const getCategoryPercentage = (count: number, total: number) => 
     total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
