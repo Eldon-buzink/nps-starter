@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle, BarChart3, PieChart } from "lucide-react";
 import Link from 'next/link';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { TrendsChart } from '@/components/charts/TrendsChart';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,7 +97,7 @@ async function getTrends(params: {start?:string,end?:string,survey?:string|null,
     
     // Fallback: get monthly data directly
     console.log('RPC failed, using direct query fallback for trends');
-    const { data, error } = await supabase
+    let query = supabase
       .from('nps_response')
       .select('creation_date, nps_score')
       .gte('creation_date', params.start || '2024-01-01')
@@ -107,6 +107,8 @@ async function getTrends(params: {start?:string,end?:string,survey?:string|null,
     if (params.title) {
       query = query.eq('title_text', params.title);
     }
+    
+    const { data, error } = await query;
     
     if (error) {
       console.error('Fallback query error:', error);
@@ -146,7 +148,7 @@ async function getTrends(params: {start?:string,end?:string,survey?:string|null,
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
     console.log('Getting themes from AI enrichment data with params:', params);
-    const { data, error } = await supabase
+    let query = supabase
       .from('nps_ai_enrichment')
       .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, creation_date, survey_name, title_text)')
       .gte('nps_response.creation_date', params.start || '2024-01-01')
@@ -156,6 +158,8 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
     if (params.title) {
       query = query.eq('nps_response.title_text', params.title);
     }
+    
+    const { data, error } = await query;
     
     console.log('Themes query result:', { dataCount: data?.length, error });
     
@@ -361,33 +365,7 @@ export default async function AnalysisPage({ searchParams }: AnalysisPageProps) 
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {trends.length > 0 ? (
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="month" 
-                    tickFormatter={(value) => new Date(value).toLocaleDateString('nl-NL', { month: 'short', year: '2-digit' })}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    labelFormatter={(value) => new Date(value).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
-                    formatter={(value: any) => [`${value}`, 'NPS Score']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="nps" 
-                    stroke="#8884d8" 
-                    fill="#8884d8" 
-                    fillOpacity={0.3}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Geen trend data beschikbaar.</p>
-          )}
+          <TrendsChart data={trends} />
         </CardContent>
       </Card>
 
