@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, BarChart3, LineChart } from "lucide-react";
+import { TrendsOverviewChart } from '@/components/charts/TrendsOverviewChart';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,9 +40,9 @@ async function getOverallTrends(params: {start?:string,end?:string,survey?:strin
     console.log('RPC failed, using direct query fallback for trends');
     const { data, error } = await supabase
       .from('nps_response')
-      .select('created_at, title_text, nps_score')
-          .gte('created_at', params.start || '2025-01-01')
-          .lte('created_at', params.end || '2025-12-31')
+      .select('creation_date, title_text, nps_score')
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31')
       .not('title_text', 'is', null);
     
     if (error) {
@@ -62,22 +63,32 @@ async function getOverallTrends(params: {start?:string,end?:string,survey?:strin
       
       const data = monthlyData.get(key)!;
       data.responses++;
-      if (row.nps_category === 'promoter') data.promoters++;
-      if (row.nps_category === 'detractor') data.detractors++;
+      if (row.nps_score >= 9) data.promoters++;
+      if (row.nps_score <= 6) data.detractors++;
     });
     
-    // Convert to result format
-    return Array.from(monthlyData.entries()).map(([key, data]) => {
-      const [month, title] = key.split('-', 2);
-      const nps = ((data.promoters - data.detractors) / data.responses) * 100;
+    // Convert to result format - aggregate by month only for overall trends
+    const monthlyAggregates = new Map<string, { responses: number; promoters: number; detractors: number }>();
+    
+    Array.from(monthlyData.entries()).forEach(([key, data]) => {
+      const [month] = key.split('-', 1);
+      if (!monthlyAggregates.has(month)) {
+        monthlyAggregates.set(month, { responses: 0, promoters: 0, detractors: 0 });
+      }
+      const aggregate = monthlyAggregates.get(month)!;
+      aggregate.responses += data.responses;
+      aggregate.promoters += data.promoters;
+      aggregate.detractors += data.detractors;
+    });
+    
+    return Array.from(monthlyAggregates.entries()).map(([month, data]) => {
+      const nps = data.responses > 0 ? ((data.promoters - data.detractors) / data.responses) * 100 : 0;
       return {
-        month,
-        title,
+        month: month + '-01', // Add day for proper date parsing
         responses: data.responses,
-        nps: Math.round(nps * 10) / 10,
-        mom_delta: null // No historical data for comparison
+        nps: Math.round(nps * 10) / 10
       };
-    }).sort((a, b) => b.month.localeCompare(a.month));
+    }).sort((a, b) => a.month.localeCompare(b.month));
   } catch (error) {
     console.error('Error in getOverallTrends:', error);
     return [];
@@ -398,17 +409,7 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <OverallChart data={overallTrends} />
-                <div className="mt-4 flex items-center space-x-4 text-sm text-muted-foreground">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1 h-4 bg-blue-500"></div>
-                    <span>NPS Score</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-4 bg-gray-300"></div>
-                    <span>Response Volume</span>
-                  </div>
-                </div>
+                <TrendsOverviewChart data={overallTrends} />
               </CardContent>
             </Card>
           </TabsContent>
