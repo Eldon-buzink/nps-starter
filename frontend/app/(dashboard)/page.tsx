@@ -12,14 +12,10 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
-  // Use current month since data is from 2025-09-23
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+  // Use full dataset for movers analysis (needs historical data)
   return {
-    start: currentMonth.toISOString().split('T')[0],
-    end: lastDayOfCurrentMonth.toISOString().split('T')[0]
+    start: "2024-01-01",
+    end: "2025-12-31"
   };
 }
 
@@ -84,6 +80,8 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
 // Get Movers from top_title_mom_moves (with fallback)
 async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
+    console.log('getMovers called with params:', params);
+    
     // Try RPC first
     const { data: rpcData, error: rpcError } = await supabase.rpc('top_title_mom_moves', {
       p_start_date: params.start ?? null,
@@ -94,7 +92,10 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_top_k: 5
     });
     
+    console.log('getMovers RPC result:', { rpcData, rpcError });
+    
     if (!rpcError && rpcData) {
+      console.log('getMovers returning RPC data:', rpcData.length, 'items');
       return rpcData;
     }
     
