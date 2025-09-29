@@ -248,6 +248,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   console.log('HomePage: Results:', {
     kpis: kpis ? 'found' : 'null',
     moversCount: movers?.length || 0,
+    moversData: movers,
     themesCount: themes?.length || 0,
     coverage: coverage ? 'found' : 'null'
   });
@@ -447,8 +448,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <CardContent>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
               <li>De NPS score is {kpis.current_nps?.toFixed(1)} in de geselecteerde periode.</li>
-              <li>{themes.promoterThemes[0]?.theme ? `${themes.promoterThemes[0].theme.replace('_', ' ')} is een top thema voor promoters.` : 'Geen promoter thema\'s beschikbaar.'}</li>
-              <li>{themes.detractorThemes[0]?.theme ? `${themes.detractorThemes[0].theme.replace('_', ' ')} is een kritiek punt voor detractors.` : 'Geen detractor thema\'s beschikbaar.'}</li>
+              <li>Van de {kpis.total_responses?.toLocaleString()} reacties zijn {kpis.promoters} promoters ({((kpis.promoters / kpis.total_responses) * 100).toFixed(1)}%) en {kpis.detractors} detractors ({((kpis.detractors / kpis.total_responses) * 100).toFixed(1)}%).</li>
+              {themes.promoterThemes.length > 0 && (
+                <li>Promoters noemen vooral: <strong>{themes.promoterThemes[0].theme.replace('_', ' ')}</strong> ({themes.promoterThemes[0].share_pct?.toFixed(1)}%) en <strong>{themes.promoterThemes[1]?.theme.replace('_', ' ')}</strong> ({themes.promoterThemes[1]?.share_pct?.toFixed(1)}%).</li>
+              )}
+              {themes.detractorThemes.length > 0 && (
+                <li>Detractors noemen vooral: <strong>{themes.detractorThemes[0].theme.replace('_', ' ')}</strong> ({themes.detractorThemes[0].share_pct?.toFixed(1)}%) en <strong>{themes.detractorThemes[1]?.theme.replace('_', ' ')}</strong> ({themes.detractorThemes[1]?.share_pct?.toFixed(1)}%).</li>
+              )}
               <li>Meer gedetailleerde analyse is beschikbaar op de Thema's en Trends pagina's.</li>
             </ul>
             <p className="text-xs text-muted-foreground mt-4">

@@ -19,9 +19,13 @@ export default function FiltersBar({
   // Set default period to cover 2024 data if no dates provided
   useEffect(() => {
     if (!start && !end) {
-      // Set to cover full dataset (2024-2025)
-      setStart("2024-01-01");
-      setEnd("2025-12-31");
+      // Set to most recent month for new users
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      
+      setStart(lastMonth.toISOString().split('T')[0]);
+      setEnd(lastDayOfLastMonth.toISOString().split('T')[0]);
     }
   }, [start, end]);
 
