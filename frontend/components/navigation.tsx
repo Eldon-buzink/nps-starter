@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { BarChart3, Upload, Settings, Home, MessageSquare, Tag, TrendingUp, Brain } from "lucide-react"
+import { BarChart3, Upload, Settings, Home, MessageSquare, Tag, TrendingUp, Brain, Search } from "lucide-react"
 
 export function Navigation() {
   return (
@@ -20,6 +20,12 @@ export function Navigation() {
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Home className="h-4 w-4" />
                   <span>Home</span>
+                </Button>
+              </Link>
+              <Link href="/analysis">
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <Search className="h-4 w-4" />
+                  <span>Analysis</span>
                 </Button>
               </Link>
               <Link href="/themes">
