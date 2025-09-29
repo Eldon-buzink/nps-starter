@@ -16,12 +16,19 @@ export function TrendsOverviewChart({ data }: TrendsOverviewChartProps) {
   }
 
   // Format data for the chart
-  const chartData = data.map(item => ({
-    month: new Date(item.month + '-01').toLocaleDateString('nl-NL', { month: 'short' }),
-    fullMonth: item.month,
-    responses: item.responses,
-    nps: item.nps
-  }));
+  const chartData = data.map(item => {
+    // Ensure proper date parsing
+    const dateStr = item.month.includes('-') ? item.month : item.month + '-01';
+    const date = new Date(dateStr);
+    
+    return {
+      month: date.toLocaleDateString('nl-NL', { month: 'short' }),
+      fullMonth: item.month,
+      responses: item.responses,
+      nps: item.nps,
+      sortDate: date.getTime() // For proper sorting
+    };
+  }).sort((a, b) => a.sortDate - b.sortDate);
 
   return (
     <div className="h-[400px]">

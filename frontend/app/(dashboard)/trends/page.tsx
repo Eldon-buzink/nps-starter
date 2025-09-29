@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, BarChart3, LineChart } from "lucide-react";
 import { TrendsOverviewChart } from '@/components/charts/TrendsOverviewChart';
+import { SurveyTrendsChart } from '@/components/charts/SurveyTrendsChart';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -121,7 +122,7 @@ async function getTrendsBySurvey(params: {start?:string,end?:string,survey?:stri
     // Get monthly data grouped by survey
     const { data, error } = await supabase
       .from('nps_response')
-      .select('creation_date, survey_name, nps_score, nps_category')
+      .select('creation_date, survey_name, nps_score')
       .gte('creation_date', params.start || '2024-01-01')
       .lte('creation_date', params.end || '2025-12-31')
       .not('survey_name', 'is', null);
@@ -148,8 +149,8 @@ async function getTrendsBySurvey(params: {start?:string,end?:string,survey?:stri
       }
       
       monthData[survey].responses++;
-      if (row.nps_category === 'promoter') monthData[survey].promoters++;
-      if (row.nps_category === 'detractor') monthData[survey].detractors++;
+      if (row.nps_score >= 9) monthData[survey].promoters++;
+      if (row.nps_score <= 6) monthData[survey].detractors++;
     });
 
     // Convert to result format
@@ -443,7 +444,7 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SurveyCharts data={surveyTrends} />
+                <SurveyTrendsChart data={surveyTrends} />
               </CardContent>
             </Card>
           </TabsContent>
