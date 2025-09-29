@@ -252,6 +252,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     themesCount: themes?.length || 0,
     coverage: coverage ? 'found' : 'null'
   });
+  
+  // Client-side debugging
+  if (typeof window !== 'undefined') {
+    console.log('CLIENT: HomePage movers data:', movers);
+    console.log('CLIENT: HomePage movers length:', movers?.length);
+    console.log('CLIENT: HomePage movers type:', typeof movers);
+  }
 
   const getCategoryPercentage = (count: number, total: number) => 
     total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
