@@ -139,10 +139,11 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
         promoters.map(async (theme: any) => {
           const { data: quoteData } = await supabase
             .from('nps_response')
-            .select('nps_explanation')
+            .select('nps_explanation, nps_ai_enrichment!inner(themes)')
             .gte('nps_score', 9)
             .contains('nps_ai_enrichment.themes', [theme.theme])
             .not('nps_explanation', 'is', null)
+            .not('nps_explanation', 'eq', '')
             .limit(1);
           
           return {
@@ -156,10 +157,11 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
         detractors.map(async (theme: any) => {
           const { data: quoteData } = await supabase
             .from('nps_response')
-            .select('nps_explanation')
+            .select('nps_explanation, nps_ai_enrichment!inner(themes)')
             .lte('nps_score', 6)
             .contains('nps_ai_enrichment.themes', [theme.theme])
             .not('nps_explanation', 'is', null)
+            .not('nps_explanation', 'eq', '')
             .limit(1);
           
           return {
@@ -275,8 +277,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
 
-        {/* KPI Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Overall Company NPS Performance */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight">Algemene bedrijfs NPS-prestaties</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">NPS Score</CardTitle>
@@ -327,10 +331,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </p>
             </CardContent>
           </Card>
+          </div>
         </div>
 
-        {/* Movers Widget */}
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Top Movers */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight">Top bewegers</h2>
+          <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="text-green-600">Grootste NPS-stijgers (laatste maand)</CardTitle>
@@ -348,7 +355,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
-                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
+                        <p className="font-medium text-gray-900 hover:text-gray-700">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
@@ -381,7 +388,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
-                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
+                        <p className="font-medium text-gray-900 hover:text-gray-700">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
@@ -399,7 +406,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         {/* Top Themes */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight">Top thema's</h2>
+          <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="text-green-600">Top promoter themes</CardTitle>
@@ -415,7 +424,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       <div className="flex justify-between items-center">
                         <Link 
                           href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=promoter`}
-                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          className="font-medium capitalize text-gray-900 hover:text-gray-700 hover:underline cursor-pointer"
                         >
                           {t.theme.replace('_', ' ')}
                         </Link>
@@ -446,7 +455,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       <div className="flex justify-between items-center">
                         <Link 
                           href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=detractor`}
-                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          className="font-medium capitalize text-gray-900 hover:text-gray-700 hover:underline cursor-pointer"
                         >
                           {t.theme.replace('_', ' ')}
                         </Link>
@@ -461,6 +470,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {/* Executive Summary */}
