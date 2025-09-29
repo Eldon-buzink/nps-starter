@@ -4,6 +4,7 @@ import FiltersBar from "@/components/filters/FiltersBar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle } from "lucide-react";
+import Link from 'next/link';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -273,7 +274,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </p>
         </div>
 
-        <FiltersBar surveys={surveys} titles={titles} />
 
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -342,16 +342,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {movers.filter(m => m.delta > 0).length > 0 ? (
                 <div className="space-y-3">
                   {movers.filter(m => m.delta > 0).map((m, i) => (
-                    <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <Link 
+                      key={i} 
+                      href={`/trends?title=${encodeURIComponent(m.title_text)}`}
+                      className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
+                    >
                       <div>
-                        <p className="font-medium">{m.title_text}</p>
+                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
                         <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -371,16 +375,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {movers.filter(m => m.delta < 0).length > 0 ? (
                 <div className="space-y-3">
                   {movers.filter(m => m.delta < 0).map((m, i) => (
-                    <div key={i} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <Link 
+                      key={i} 
+                      href={`/trends?title=${encodeURIComponent(m.title_text)}`}
+                      className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
+                    >
                       <div>
-                        <p className="font-medium">{m.title_text}</p>
+                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-red-600">{m.delta?.toFixed(1)}</p>
                         <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -405,7 +413,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {themes.promoterThemes.map((t, i) => (
                     <div key={i} className="py-2 border-b last:border-b-0">
                       <div className="flex justify-between items-center">
-                        <p className="font-medium capitalize">{t.theme.replace('_', ' ')}</p>
+                        <Link 
+                          href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=promoter`}
+                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        >
+                          {t.theme.replace('_', ' ')}
+                        </Link>
                         <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
@@ -431,7 +444,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {themes.detractorThemes.map((t, i) => (
                     <div key={i} className="py-2 border-b last:border-b-0">
                       <div className="flex justify-between items-center">
-                        <p className="font-medium capitalize">{t.theme.replace('_', ' ')}</p>
+                        <Link 
+                          href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=detractor`}
+                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        >
+                          {t.theme.replace('_', ' ')}
+                        </Link>
                         <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
@@ -454,17 +472,52 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>De NPS score is {kpis.current_nps?.toFixed(1)} in de geselecteerde periode.</li>
-              <li>Van de {kpis.total_responses?.toLocaleString()} reacties zijn {kpis.promoters} promoters ({((kpis.promoters / kpis.total_responses) * 100).toFixed(1)}%) en {kpis.detractors} detractors ({((kpis.detractors / kpis.total_responses) * 100).toFixed(1)}%).</li>
-              {themes.promoterThemes.length > 0 && (
-                <li>Promoters noemen vooral: <strong>{themes.promoterThemes[0].theme.replace('_', ' ')}</strong> ({themes.promoterThemes[0].share_pct?.toFixed(1)}%) en <strong>{themes.promoterThemes[1]?.theme.replace('_', ' ')}</strong> ({themes.promoterThemes[1]?.share_pct?.toFixed(1)}%).</li>
-              )}
-              {themes.detractorThemes.length > 0 && (
-                <li>Detractors noemen vooral: <strong>{themes.detractorThemes[0].theme.replace('_', ' ')}</strong> ({themes.detractorThemes[0].share_pct?.toFixed(1)}%) en <strong>{themes.detractorThemes[1]?.theme.replace('_', ' ')}</strong> ({themes.detractorThemes[1]?.share_pct?.toFixed(1)}%).</li>
-              )}
-              <li>Meer gedetailleerde analyse is beschikbaar op de Thema's en Trends pagina's.</li>
-            </ul>
+            <div className="space-y-4">
+              {/* Key Metrics */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">📊 Huidige Performance</h4>
+                <p className="text-sm text-blue-800">
+                  NPS Score: <strong>{kpis.current_nps?.toFixed(1)}</strong> • 
+                  {kpis.promoters} promoters ({((kpis.promoters / kpis.total_responses) * 100).toFixed(1)}%) • 
+                  {kpis.detractors} detractors ({((kpis.detractors / kpis.total_responses) * 100).toFixed(1)}%)
+                </p>
+              </div>
+
+              {/* Actionable Insights */}
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-green-900 mb-2">✅ Wat gaat goed?</h4>
+                {themes.promoterThemes.length > 0 ? (
+                  <p className="text-sm text-green-800">
+                    Promoters waarderen vooral <strong>{themes.promoterThemes[0].theme.replace('_', ' ')}</strong> ({themes.promoterThemes[0].share_pct?.toFixed(1)}%). 
+                    {themes.promoterThemes[1] && ` Ook ${themes.promoterThemes[1].theme.replace('_', ' ')} wordt positief genoemd (${themes.promoterThemes[1].share_pct?.toFixed(1)}%).`}
+                  </p>
+                ) : (
+                  <p className="text-sm text-green-800">Geen specifieke promoter thema's geïdentificeerd.</p>
+                )}
+              </div>
+
+              <div className="bg-red-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-red-900 mb-2">⚠️ Verbeterpunten</h4>
+                {themes.detractorThemes.length > 0 ? (
+                  <p className="text-sm text-red-800">
+                    Detractors klagen vooral over <strong>{themes.detractorThemes[0].theme.replace('_', ' ')}</strong> ({themes.detractorThemes[0].share_pct?.toFixed(1)}%). 
+                    {themes.detractorThemes[1] && ` Ook ${themes.detractorThemes[1].theme.replace('_', ' ')} is een probleem (${themes.detractorThemes[1].share_pct?.toFixed(1)}%).`}
+                  </p>
+                ) : (
+                  <p className="text-sm text-red-800">Geen specifieke detractor thema's geïdentificeerd.</p>
+                )}
+              </div>
+
+              {/* Recommendations */}
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-yellow-900 mb-2">🎯 Aanbevelingen</h4>
+                <ul className="text-sm text-yellow-800 space-y-1">
+                  <li>• <strong>Focus op {themes.detractorThemes[0]?.theme.replace('_', ' ')}</strong> - dit is de grootste bron van ontevredenheid</li>
+                  <li>• <strong>Behoud {themes.promoterThemes[0]?.theme.replace('_', ' ')}</strong> - dit is wat promoters waarderen</li>
+                  <li>• <strong>Analyseer de trends</strong> om te zien welke titels verbeteren of verslechteren</li>
+                </ul>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground mt-4">
               Hoe deze inzichten werken: De AI analyseert de opmerkingen en identificeert terugkerende thema's en sentimenten.
             </p>
