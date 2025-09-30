@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { getFilterOptions } from "@/lib/filters";
-import FiltersBar from "@/components/filters/FiltersBar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,15 +13,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Helper function to get last full calendar month
-function getLastFullMonth() {
-  const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  
+// Helper function to get a reasonable date range for the data
+function getDefaultDateRange() {
+  // Use a broader range that includes 2024-2025 to capture all data
   return {
-    start: lastMonth.toISOString().split('T')[0],
-    end: lastDayOfLastMonth.toISOString().split('T')[0]
+    start: '2024-01-01',
+    end: '2025-12-31'
   };
 }
 
@@ -55,7 +51,7 @@ async function getResponses(params: {
         )
       `)
       .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2024-12-31')
+      .lte('created_at', params.end || '2025-12-31')
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -65,7 +61,7 @@ async function getResponses(params: {
     if (params.title) {
       query = query.eq('title_text', params.title);
     }
-    if (params.nps_bucket) {
+    if (params.nps_bucket && params.nps_bucket !== 'all') {
       if (params.nps_bucket === 'promoter') {
         query = query.gte('nps_score', 9);
       } else if (params.nps_bucket === 'passive') {
@@ -77,17 +73,14 @@ async function getResponses(params: {
     if (params.search) {
       query = query.ilike('nps_explanation', `%${params.search}%`);
     }
-    if (params.theme) {
+    if (params.theme && params.theme !== 'all') {
       query = query.contains('nps_ai_enrichment.themes', [params.theme]);
     }
 
     // Apply pagination
-    if (params.limit) {
-      query = query.limit(params.limit);
-    }
-    if (params.offset) {
-      query = query.range(params.offset, params.offset + (params.limit || 50) - 1);
-    }
+    const limit = params.limit || 50;
+    const offset = params.offset || 0;
+    query = query.range(offset, offset + limit - 1);
 
     const { data, error } = await query;
     if (error) {
@@ -106,7 +99,10 @@ async function getAvailableThemes(params: {start?:string,end?:string,survey?:str
   try {
     const { data, error } = await supabase
       .from('nps_ai_enrichment')
-      .select('themes')
+      .select(`
+        themes,
+        nps_response!inner(creation_date)
+      `)
       .not('themes', 'is', null)
       .gte('nps_response.creation_date', params.start || '2024-01-01')
       .lte('nps_response.creation_date', params.end || '2025-12-31');
@@ -165,8 +161,8 @@ interface ResponsesPageProps {
 export default async function ResponsesPage({ searchParams }: ResponsesPageProps) {
   const { surveys, titles } = await getFilterOptions();
   
-  // Use provided dates or default to last full month
-  const defaultPeriod = getLastFullMonth();
+  // Use provided dates or default to full data range
+  const defaultPeriod = getDefaultDateRange();
   const start = searchParams?.start ?? defaultPeriod.start;
   const end = searchParams?.end ?? defaultPeriod.end;
   const survey = searchParams?.survey ?? null;
@@ -208,7 +204,6 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
           </p>
         </div>
 
-        <FiltersBar surveys={surveys} titles={titles} />
 
         {/* Additional Filters */}
         <Card>
@@ -219,12 +214,19 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
+            <form action="/responses" method="GET" className="grid gap-4 md:grid-cols-4">
+              {/* Hidden fields to preserve existing filters */}
+              <input type="hidden" name="start" value={start} />
+              <input type="hidden" name="end" value={end} />
+              <input type="hidden" name="survey" value={survey || ''} />
+              <input type="hidden" name="title" value={title || ''} />
+              
               <div>
                 <label className="block text-sm mb-1">Zoek in opmerkingen</label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input 
+                    name="search"
                     placeholder="Zoek in opmerkingen..."
                     className="pl-8"
                     defaultValue={search || ''}
@@ -233,7 +235,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
               </div>
               <div>
                 <label className="block text-sm mb-1">NPS Categorie</label>
-                <Select defaultValue={nps_bucket || undefined}>
+                <Select name="nps_bucket" defaultValue={nps_bucket || 'all'}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle categorieën" />
                   </SelectTrigger>
@@ -247,7 +249,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
               </div>
               <div>
                 <label className="block text-sm mb-1">Thema</label>
-                <Select defaultValue={theme || undefined}>
+                <Select name="theme" defaultValue={theme || 'all'}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle thema's" />
                   </SelectTrigger>
@@ -260,9 +262,9 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                 </Select>
               </div>
               <div className="flex items-end">
-                <Button className="w-full">Filters Toepassen</Button>
+                <Button type="submit" className="w-full">Filters Toepassen</Button>
               </div>
-            </div>
+            </form>
           </CardContent>
         </Card>
 

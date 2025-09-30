@@ -16,7 +16,7 @@ import {
 
 interface ThemeExplanation {
   name: string;
-  source: 'base' | 'ai_discovered';
+  source: 'base' | 'ai';
   explanation: string;
   businessRelevance: 'high' | 'medium' | 'low';
   frequency?: number;
@@ -36,12 +36,12 @@ export default function ThemeExplanation({
 }: ThemeExplanationProps) {
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
 
-  const getSourceIcon = (source: 'base' | 'ai_discovered') => {
-    return source === 'ai_discovered' ? <Brain className="h-4 w-4" /> : <Database className="h-4 w-4" />;
+  const getSourceIcon = (source: 'base' | 'ai') => {
+    return source === 'ai' ? <Brain className="h-4 w-4" /> : <Database className="h-4 w-4" />;
   };
 
-  const getSourceColor = (source: 'base' | 'ai_discovered') => {
-    return source === 'ai_discovered' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
+  const getSourceColor = (source: 'base' | 'ai') => {
+    return source === 'ai' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
   };
 
   const getRelevanceIcon = (relevance: 'high' | 'medium' | 'low') => {
@@ -61,7 +61,7 @@ export default function ThemeExplanation({
   };
 
   const baseThemes = themes.filter(t => t.source === 'base');
-  const aiThemes = themes.filter(t => t.source === 'ai_discovered');
+  const aiThemes = themes.filter(t => t.source === 'ai');
 
   return (
     <Card className="w-full">
@@ -111,7 +111,7 @@ export default function ThemeExplanation({
                   <Badge className={getSourceColor(theme.source)}>
                     {getSourceIcon(theme.source)}
                     <span className="ml-1">
-                      {theme.source === 'ai_discovered' ? 'AI Generated' : 'Base Theme'}
+                      {theme.source === 'ai' ? 'AI Generated' : 'Base Theme'}
                     </span>
                   </Badge>
                   <Badge className={getRelevanceColor(theme.businessRelevance)}>
@@ -137,7 +137,7 @@ export default function ThemeExplanation({
                     <p className="text-sm text-gray-700 mt-1">{theme.explanation}</p>
                   </div>
                   
-                  {theme.source === 'ai_discovered' && (
+                  {theme.source === 'ai' && (
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       {theme.confidence && (
                         <div>
@@ -172,7 +172,7 @@ export default function ThemeExplanation({
                   )}
                   
                   <div className="text-xs text-gray-500">
-                    {theme.source === 'ai_discovered' 
+                    {theme.source === 'ai' 
                       ? '🤖 This theme was discovered by AI analysis of customer feedback'
                       : '📋 This is a predefined business category'
                     }

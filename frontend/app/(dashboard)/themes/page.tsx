@@ -4,9 +4,10 @@ import FiltersBar from "@/components/filters/FiltersBar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tag, TrendingUp, TrendingDown } from "lucide-react";
+import { Tag, TrendingUp, TrendingDown, Lightbulb, Brain, Database, CheckCircle, AlertCircle, Info } from "lucide-react";
 import Link from "next/link";
-import ThemeExplanation from "@/components/theme-explanation";
+import OtherClusterDetails from "@/components/OtherClusterDetails";
+import { ThemeInfoButton } from "@/components/ThemeInfoButton";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,55 +26,99 @@ function getLastFullMonth() {
   };
 }
 
-// Get themes data from AI enrichment (direct query)
+// Get themes data from normalized view with enhanced explanations
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    console.log('Getting themes from AI enrichment data with params:', params);
-    const { data, error } = await supabase
-      .from('nps_ai_enrichment')
-      .select('themes, sentiment_score, response_id, nps_response!inner(nps_score, creation_date, survey_name, title_text)')
-                  .gte('nps_response.creation_date', params.start || '2024-01-01')
-                  .lte('nps_response.creation_date', params.end || '2024-12-31')
-      .not('themes', 'is', null)
-      .limit(100000); // Very high limit to get all data
+    console.log('Getting normalized themes with params:', params);
     
-    console.log('Themes query result:', { dataCount: data?.length, error });
+    // Use the normalized view that handles synonyms and "Other (cluster)" collapsing
+    const { data, error } = await supabase
+      .from('v_theme_overview_normalized')
+      .select('*')
+      .order('mentions', { ascending: false });
+    
+    console.log('Normalized themes query result:', { dataCount: data?.length, error });
     
     if (error) {
-      console.error('Fallback query error:', error);
+      console.error('Normalized themes query error:', error);
       return [];
     }
     
-    // Process theme data
-    const themeMap = new Map<string, { count: number; sentiment: number[]; nps: number[] }>();
-    
-    data?.forEach(row => {
-      const themes = row.themes as string[];
-      const sentiment = row.sentiment_score || 0;
-      const nps = (row.nps_response as any)?.nps_score || 0;
+    // Transform the data to match the expected format and add enhanced explanations
+    const result = await Promise.all(data?.map(async (row) => {
+      // Define the original base themes (the ones that were predefined)
+      const baseThemes = ['content_kwaliteit', 'pricing', 'merkvertrouwen', 'overige'];
+      const isBaseTheme = baseThemes.includes(row.theme);
+      const isOtherCluster = row.theme === 'Other (cluster)';
       
-      themes.forEach(theme => {
-        if (!themeMap.has(theme)) {
-          themeMap.set(theme, { count: 0, sentiment: [], nps: [] });
+      // Determine business relevance based on mentions
+      let businessRelevance: 'high' | 'medium' | 'low' = 'medium';
+      if (row.mentions >= 100) businessRelevance = 'high';
+      else if (row.mentions < 10) businessRelevance = 'low';
+
+      let explanation = '';
+      
+      if (isOtherCluster) {
+        explanation = 'Cluster of themes with fewer than 3 mentions each';
+      } else if (isBaseTheme) {
+        explanation = `Predefined business category for ${row.theme.replace('_', ' ')} feedback`;
+      } else {
+        // For AI themes, get sample keywords from actual responses
+        try {
+          const { data: sampleResponses } = await supabase
+            .from('v_theme_assignments_normalized')
+            .select(`
+              nps_response!inner(nps_explanation)
+            `)
+            .eq('canonical_theme', row.theme)
+            .limit(5);
+
+          // Extract keywords from sample responses
+          const keywords = new Set<string>();
+          sampleResponses?.forEach((response: any) => {
+            const text = response.nps_response.nps_explanation?.toLowerCase() || '';
+            // Extract meaningful words (3+ characters, not common words)
+            const words = text.match(/\b\w{3,}\b/g) || [];
+            words.forEach((word: string) => {
+              if (!['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'oil', 'sit', 'try', 'use', 'why', 'let', 'put', 'say', 'she', 'too', 'use'].includes(word)) {
+                keywords.add(word);
+              }
+            });
+          });
+
+          const keywordList = Array.from(keywords).slice(0, 5);
+          const keywordText = keywordList.length > 0 
+            ? ` based on keywords like "${keywordList.join('", "')}"`
+            : ' based on common patterns in customer feedback';
+
+          explanation = `AI-discovered theme from customer feedback analysis${keywordText}. This theme emerged from multiple responses indicating ${row.theme.replace('_', ' ')} as a key concern.`;
+        } catch (keywordError) {
+          console.error('Error fetching keywords for theme:', row.theme, keywordError);
+          explanation = `AI-discovered theme from customer feedback analysis. This theme emerged from multiple responses indicating ${row.theme.replace('_', ' ')} as a key concern.`;
         }
-        const data = themeMap.get(theme)!;
-        data.count++;
-        data.sentiment.push(sentiment);
-        data.nps.push(nps);
-      });
-    });
+      }
+
+      return {
+        theme: row.theme,
+        count_responses: row.mentions,
+        share_pct: row.mentions > 0 ? Math.round((row.mentions / (data.reduce((sum, r) => sum + r.mentions, 0))) * 100 * 10) / 10 : 0,
+        avg_sentiment: Math.round((row.avg_sentiment || 0) * 100) / 100,
+        avg_nps: Math.round((row.avg_nps || 0) * 10) / 10,
+        pct_promoters: Math.round((row.pct_promoters || 0) * 100),
+        pct_passives: Math.round((row.pct_passives || 0) * 100),
+        pct_detractors: Math.round((row.pct_detractors || 0) * 100),
+        pct_pos_sentiment: Math.round((row.pct_pos_sentiment || 0) * 100),
+        pct_neg_sentiment: Math.round((row.pct_neg_sentiment || 0) * 100),
+        // Add enhanced explanation data
+        explanation,
+        source: isBaseTheme ? 'base' as const : 'ai' as const,
+        businessRelevance,
+        frequency: row.mentions / (data.reduce((sum, t) => sum + t.mentions, 0) || 1),
+        confidence: isBaseTheme ? 1.0 : 0.8
+      };
+    }) || []);
     
-    const total = Array.from(themeMap.values()).reduce((sum, data) => sum + data.count, 0);
-    
-    const result = Array.from(themeMap.entries()).map(([theme, data]) => ({
-      theme,
-      count_responses: data.count,
-      share_pct: Math.round((data.count / total) * 100 * 10) / 10,
-      avg_sentiment: Math.round(data.sentiment.reduce((a, b) => a + b, 0) / data.sentiment.length * 100) / 100,
-      avg_nps: Math.round(data.nps.reduce((a, b) => a + b, 0) / data.nps.length * 10) / 10
-    })).sort((a, b) => b.count_responses - a.count_responses);
-    
-    console.log(`Processed ${result.length} themes from ${data?.length || 0} responses:`, result.slice(0, 5));
+    console.log(`Processed ${result.length} normalized themes with explanations:`, result.slice(0, 5));
     return result;
   } catch (error) {
     console.error('Error in getThemes:', error);
@@ -81,50 +126,33 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
   }
 }
 
-// Get promoters vs detractors data
+// Get promoters vs detractors data from normalized themes
 async function getPromoterDetractorData(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    console.log('Getting promoter/detractor data from AI enrichment');
+    console.log('Getting promoter/detractor data from normalized themes');
+    
+    // Use the normalized view data that already includes promoter/detractor percentages
     const { data, error } = await supabase
-      .from('nps_ai_enrichment')
-      .select('themes, promoter_flag, detractor_flag, nps_response!inner(creation_date, survey_name, title_text)')
-                  .gte('nps_response.creation_date', params.start || '2024-01-01')
-                  .lte('nps_response.creation_date', params.end || '2024-12-31')
-      .not('themes', 'is', null)
-      .limit(100000); // Very high limit to get all data
+      .from('v_theme_overview_normalized')
+      .select('*')
+      .order('mentions', { ascending: false });
     
     if (error) {
-      console.error('Promoter/detractor query error:', error);
+      console.error('Normalized promoter/detractor query error:', error);
       return [];
     }
     
-    console.log(`Found ${data?.length || 0} responses for promoter/detractor analysis`);
+    console.log(`Found ${data?.length || 0} normalized themes for promoter/detractor analysis`);
     
-    // Process the data to get theme counts by promoter/detractor
-    const themeMap = new Map<string, { promoters: number; detractors: number }>();
+    // Transform the data to include actual counts
+    const result = data?.map(row => ({
+      theme: row.theme,
+      promoters: Math.round((row.pct_promoters || 0) * row.mentions),
+      detractors: Math.round((row.pct_detractors || 0) * row.mentions),
+      total_responses: row.mentions
+    })) || [];
     
-    data?.forEach(row => {
-      const themes = row.themes as string[];
-      const isPromoter = row.promoter_flag;
-      const isDetractor = row.detractor_flag;
-      
-      themes.forEach(theme => {
-        if (!themeMap.has(theme)) {
-          themeMap.set(theme, { promoters: 0, detractors: 0 });
-        }
-        const data = themeMap.get(theme)!;
-        if (isPromoter) data.promoters++;
-        if (isDetractor) data.detractors++;
-      });
-    });
-    
-    const result = Array.from(themeMap.entries()).map(([theme, data]) => ({
-      theme,
-      promoters: data.promoters,
-      detractors: data.detractors
-    })).sort((a, b) => (b.promoters + b.detractors) - (a.promoters + a.detractors));
-    
-    console.log(`Processed ${result.length} themes for promoter/detractor analysis:`, result.slice(0, 5));
+    console.log(`Processed ${result.length} normalized themes for promoter/detractor analysis:`, result.slice(0, 5));
     return result;
   } catch (error) {
     console.error('Error in getPromoterDetractorData:', error);
@@ -138,20 +166,97 @@ async function getTopThemesForSparklines(params: {start?:string,end?:string,surv
     const themes = await getThemes(params);
     const top5Themes = themes.slice(0, 5);
     
-    // For each theme, get monthly share data
+    // For each theme, get monthly share data using normalized themes
     const sparklineData = await Promise.all(
       top5Themes.map(async (theme: any) => {
-        const { data, error } = await supabase.rpc('title_theme_share_mom', {
-          p_theme: theme.theme,
-          p_start_date: params.start ?? null,
-          p_end_date: params.end ?? null,
-          p_survey: params.survey ?? null,
-          p_title: params.title ?? null,
+        // Get theme assignments for this normalized theme
+        const { data: themeData, error: themeError } = await supabase
+          .from('v_theme_assignments_normalized')
+          .select(`
+            canonical_theme,
+            response_id,
+            nps_response!inner(creation_date)
+          `)
+          .eq('canonical_theme', theme.theme)
+          .gte('nps_response.creation_date', '2024-01-01')
+          .lte('nps_response.creation_date', '2025-12-31');
+        
+        if (themeError) {
+          console.error('Error fetching theme data:', themeError);
+          return { theme: theme.theme, data: [] };
+        }
+        
+        console.log(`Theme data for ${theme.theme}:`, { count: themeData?.length, data: themeData?.slice(0, 3) });
+        
+        // Group theme data by month (count unique responses, not theme assignments)
+        const monthlyThemeData = themeData?.reduce((acc: any, row: any) => {
+          const month = new Date(row.nps_response.creation_date).toISOString().substring(0, 7);
+          if (!acc[month]) {
+            acc[month] = new Set();
+          }
+          acc[month].add(row.response_id);
+          return acc;
+        }, {}) || {};
+        
+        // Convert sets to counts
+        const monthlyThemeCounts = Object.keys(monthlyThemeData).reduce((acc: any, month: string) => {
+          acc[month] = monthlyThemeData[month].size;
+          return acc;
+        }, {});
+        
+        // Calculate total responses across all themes for each month
+        // This gives us a more accurate total for percentage calculation
+        const { data: allThemeData, error: allThemeError } = await supabase
+          .from('v_theme_assignments_normalized')
+          .select(`
+            response_id,
+            nps_response!inner(creation_date)
+          `)
+          .gte('nps_response.creation_date', '2024-01-01')
+          .lte('nps_response.creation_date', '2025-12-31');
+        
+        if (allThemeError) {
+          console.error('Error fetching all theme data:', allThemeError);
+          return { theme: theme.theme, data: [] };
+        }
+        
+        // Group all theme data by month (unique responses across all themes)
+        const monthlyTotalData = allThemeData?.reduce((acc: any, row: any) => {
+          const month = new Date(row.nps_response.creation_date).toISOString().substring(0, 7);
+          if (!acc[month]) {
+            acc[month] = new Set();
+          }
+          acc[month].add(row.response_id);
+          return acc;
+        }, {}) || {};
+        
+        // Convert sets to counts
+        const monthlyTotalCounts = Object.keys(monthlyTotalData).reduce((acc: any, month: string) => {
+          acc[month] = monthlyTotalData[month].size;
+          return acc;
+        }, {});
+        
+        // Calculate share percentages and create sparkline points
+        const sparklinePoints = Object.keys(monthlyTotalCounts).map(month => {
+          const themeCount = monthlyThemeCounts[month] || 0;
+          const totalCount = monthlyTotalCounts[month] || 0;
+          const sharePct = totalCount > 0 ? (themeCount / totalCount) * 100 : 0;
+          
+          return {
+            month,
+            share_pct: sharePct
+          };
+        }).sort((a, b) => a.month.localeCompare(b.month));
+        
+        console.log(`Sparkline data for ${theme.theme}:`, {
+          monthlyThemeCounts,
+          monthlyTotalCounts,
+          sparklinePoints
         });
         
         return {
           theme: theme.theme,
-          data: data || []
+          data: sparklinePoints
         };
       })
     );
@@ -163,52 +268,6 @@ async function getTopThemesForSparklines(params: {start?:string,end?:string,surv
   }
 }
 
-// Get theme explanations from the last enrichment run
-async function getThemeExplanations() {
-  try {
-    // This would typically come from a database table storing enrichment results
-    // For now, we'll return the base themes with explanations
-    const baseThemes = [
-      {
-        name: 'content_kwaliteit',
-        source: 'base' as const,
-        explanation: 'Predefined business category for content quality feedback',
-        businessRelevance: 'high' as const,
-        frequency: 0.35,
-        confidence: 1.0
-      },
-      {
-        name: 'pricing',
-        source: 'base' as const,
-        explanation: 'Predefined business category for pricing-related feedback',
-        businessRelevance: 'high' as const,
-        frequency: 0.28,
-        confidence: 1.0
-      },
-      {
-        name: 'merkvertrouwen',
-        source: 'base' as const,
-        explanation: 'Predefined business category for brand trust and credibility',
-        businessRelevance: 'high' as const,
-        frequency: 0.22,
-        confidence: 1.0
-      },
-      {
-        name: 'overige',
-        source: 'base' as const,
-        explanation: 'Predefined catch-all category for miscellaneous feedback',
-        businessRelevance: 'medium' as const,
-        frequency: 0.15,
-        confidence: 1.0
-      }
-    ];
-
-    return baseThemes;
-  } catch (error) {
-    console.error('Error in getThemeExplanations:', error);
-    return [];
-  }
-}
 
 interface ThemesPageProps {
   searchParams: {
@@ -231,11 +290,10 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   console.log('ThemesPage: Fetching data with params:', { start, end, survey, title });
   
   // Fetch all data in parallel
-  const [themes, promoterDetractorData, sparklineData, themeExplanations] = await Promise.all([
+  const [themes, promoterDetractorData, sparklineData] = await Promise.all([
     getThemes({ start, end, survey, title }),
     getPromoterDetractorData({ start, end, survey, title }),
-    getTopThemesForSparklines({ start, end, survey, title }),
-    getThemeExplanations()
+    getTopThemesForSparklines({ start, end, survey, title })
   ]);
   
   console.log('ThemesPage: Results:', {
@@ -255,66 +313,213 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
 
         <FiltersBar surveys={surveys} titles={titles} />
 
-        {/* Theme Discovery Results */}
-        {themeExplanations.length > 0 && (
-          <ThemeExplanation 
-            themes={themeExplanations}
-            title="Theme Discovery & Explanations"
-            description="Understanding how themes are generated and their business relevance"
-          />
+        {/* Trends per Theme (Top 5 Sparklines) */}
+        {sparklineData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Trends per Thema (Top 5)</CardTitle>
+              <CardDescription>
+                Maandelijkse aandeel ontwikkeling van de top 5 thema's
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {sparklineData.map((themeData: any, i: number) => {
+                  const avgPercentage = themeData.data.length > 0 
+                    ? (themeData.data.reduce((sum: number, point: any) => sum + point.share_pct, 0) / themeData.data.length)
+                    : 0;
+                  
+                  const isTrendingUp = themeData.data.length > 1 && 
+                    themeData.data[themeData.data.length - 1]?.share_pct > themeData.data[themeData.data.length - 2]?.share_pct;
+                  
+                  return (
+                    <div key={i} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex justify-between items-center mb-3">
+                        <div>
+                          <h4 className="font-medium text-lg capitalize">{themeData.theme.replace('_', ' ')}</h4>
+                          <p className="text-sm text-muted-foreground">Monthly trend</p>
+                        </div>
+                        <div className="text-right">
+                      <div className="flex items-center space-x-2">
+                        {themeData.data.length > 1 && (
+                              isTrendingUp ? (
+                              <TrendingUp className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4 text-red-600" />
+                              )
+                            )}
+                            <span className="text-2xl font-bold">
+                              {avgPercentage.toFixed(1)}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Average share</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-end space-x-1 h-12 bg-gray-50 rounded p-2">
+                        {themeData.data.map((point: any, j: number) => {
+                          const maxHeight = Math.max(...themeData.data.map((p: any) => p.share_pct || 0));
+                          const height = maxHeight > 0 ? ((point.share_pct || 0) / maxHeight) * 100 : 0;
+                          
+                          return (
+                        <div
+                          key={j}
+                              className="bg-blue-500 rounded-t flex-1 min-w-[4px]"
+                          style={{
+                                height: `${Math.max(height, 8)}%`,
+                          }}
+                          title={`${point.month}: ${point.share_pct?.toFixed(1)}%`}
+                        />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Theme Cards Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {themes.length > 0 ? (
-            themes.map((theme: any) => (
-              <Card key={theme.theme} className="hover:shadow-md transition-shadow">
+        {/* Theme Discovery Summary */}
+        {themes.length > 0 && (
+          <Card className="w-full">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="capitalize">{theme.theme.replace('_', ' ')}</span>
-                    <Link href={`/responses?theme=${encodeURIComponent(theme.theme)}`}>
-                      <Button variant="ghost" size="sm">
-                        <Tag className="h-4 w-4" />
-                      </Button>
-                    </Link>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5" />
+                Theme Discovery & Explanations
                   </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Understanding how themes are generated and their business relevance
+              </p>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Volume:</span>
-                    <span className="text-sm">{theme.count_responses}</span>
+            <CardContent className="space-y-4">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {themes.filter(t => t.source === 'base').length}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Aandeel:</span>
-                    <Badge variant="secondary">{theme.share_pct?.toFixed(1)}%</Badge>
+                  <div className="text-sm text-gray-600">Base Themes</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {themes.filter(t => t.source === 'ai').length}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Gem. NPS:</span>
-                    <span className={`text-sm font-medium ${
-                      theme.avg_nps >= 7 ? 'text-green-600' : 
-                      theme.avg_nps >= 6 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {theme.avg_nps?.toFixed(1)}
-                    </span>
+                  <div className="text-sm text-gray-600">AI Discovered</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {themes.filter(t => t.businessRelevance === 'high').length}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Sentiment:</span>
-                    <span className={`text-sm font-medium ${
-                      theme.avg_sentiment > 0 ? 'text-green-600' : 
-                      theme.avg_sentiment < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {theme.avg_sentiment?.toFixed(2)}
-                    </span>
+                  <div className="text-sm text-gray-600">High Relevance</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-600">{themes.length}</div>
+                  <div className="text-sm text-gray-600">Total Themes</div>
+                </div>
+              </div>
+
+              {/* Theme List with Tags and Detailed Data */}
+              <div className="space-y-3">
+                {themes.map((theme, index) => {
+                  // Use the theme data directly since it now includes all the explanation data
+                  
+                  return (
+                    <div 
+                      key={theme.theme}
+                      className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium capitalize">
+                            {theme.theme.replace(/_/g, ' ')}
+                          </h4>
+                          <Badge className={theme.source === 'ai' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}>
+                            {theme.source === 'ai' ? (
+                              <>
+                                <Brain className="h-4 w-4" />
+                                <span className="ml-1">AI Generated</span>
+                              </>
+                            ) : (
+                              <>
+                                <Database className="h-4 w-4" />
+                                <span className="ml-1">Base Theme</span>
+                              </>
+                            )}
+                          </Badge>
+                          <Badge className={
+                            theme.businessRelevance === 'high' ? 'bg-green-100 text-green-800' :
+                            theme.businessRelevance === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }>
+                            {theme.businessRelevance === 'high' ? (
+                              <>
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="ml-1">High Relevance</span>
+                              </>
+                            ) : theme.businessRelevance === 'medium' ? (
+                              <>
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="ml-1">Medium Relevance</span>
+                              </>
+                            ) : (
+                              <>
+                                <Info className="h-4 w-4" />
+                                <span className="ml-1">Low Relevance</span>
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                        
+                        <ThemeInfoButton explanation={theme.explanation} />
+                      </div>
+
+                      {/* Detailed Metrics */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Volume:</span>
+                          <span className="font-medium">{theme.count_responses || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Share:</span>
+                          <span className="font-medium">{theme.share_pct?.toFixed(1) || 0}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Avg NPS:</span>
+                          <span className={`font-medium ${
+                            (theme.avg_nps || 0) >= 7 ? 'text-green-600' : 
+                            (theme.avg_nps || 0) >= 6 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {(theme.avg_nps || 0).toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Sentiment:</span>
+                          <span className={`font-medium ${
+                            (theme.avg_sentiment || 0) > 0 ? 'text-green-600' : 
+                            (theme.avg_sentiment || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                          }`}>
+                            {(theme.avg_sentiment || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Theme Explanation */}
+                      <div className="mt-3 text-xs text-muted-foreground">
+                        {theme.source === 'ai' 
+                          ? '🤖 This theme was discovered by AI analysis of customer feedback'
+                          : '📋 This is a predefined business category'
+                        }
+                      </div>
+                    </div>
+                  );
+                })}
                   </div>
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-8">
-              <p className="text-muted-foreground">Geen thema's in deze periode.</p>
-            </div>
           )}
-        </div>
+
 
         {/* Promoters vs Detractors Chart */}
         {promoterDetractorData.length > 0 && (
@@ -350,56 +555,6 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Promoters: {item.promoters}</span>
                       <span>Detractors: {item.detractors}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Trends per Theme (Top 5 Sparklines) */}
-        {sparklineData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Trends per Thema (Top 5)</CardTitle>
-              <CardDescription>
-                Maandelijkse aandeel ontwikkeling van de top 5 thema's
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {sparklineData.map((themeData: any, i: number) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="capitalize font-medium">{themeData.theme.replace('_', ' ')}</span>
-                      <div className="flex items-center space-x-2">
-                        {themeData.data.length > 1 && (
-                          <>
-                            {themeData.data[themeData.data.length - 1]?.share_pct > themeData.data[themeData.data.length - 2]?.share_pct ? (
-                              <TrendingUp className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <TrendingDown className="h-4 w-4 text-red-600" />
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {themeData.data[themeData.data.length - 1]?.share_pct?.toFixed(1)}%
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-end space-x-1 h-8">
-                      {themeData.data.map((point: any, j: number) => (
-                        <div
-                          key={j}
-                          className="bg-blue-500 rounded-t"
-                          style={{
-                            height: `${Math.max((point.share_pct || 0) * 2, 4)}px`,
-                            width: '8px'
-                          }}
-                          title={`${point.month}: ${point.share_pct?.toFixed(1)}%`}
-                        />
-                      ))}
                     </div>
                   </div>
                 ))}

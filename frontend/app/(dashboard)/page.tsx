@@ -339,8 +339,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <h2 className="text-xl font-semibold">Top Movers</h2>
           
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
+            <Card className="h-full">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-green-600">Grootste NPS-stijgers (laatste maand)</CardTitle>
                 <CardDescription>
                   We tonen de laatste maand met ≥ 30 reacties.
@@ -356,7 +356,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
-                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
+                        <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
@@ -372,8 +372,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="h-full">
+            <CardHeader className="pb-3">
               <CardTitle className="text-red-600">Grootste NPS-dalers (laatste maand)</CardTitle>
               <CardDescription>
                 We tonen de laatste maand met ≥ 30 reacties.
@@ -389,7 +389,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
-                        <p className="font-medium text-blue-600 hover:text-blue-800">{m.title_text}</p>
+                        <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
@@ -412,8 +412,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <h2 className="text-xl font-semibold">Top Thema's</h2>
           
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
+            <Card className="h-full">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-green-600">Top promoter themes</CardTitle>
                 <CardDescription>
                   Welke onderwerpen noemen promoters het meest?
@@ -423,18 +423,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {themes.promoterThemes.length > 0 ? (
                 <div className="space-y-3">
                   {themes.promoterThemes.map((t, i) => (
-                    <div key={i} className="py-2 border-b last:border-b-0">
+                    <Link 
+                      key={i} 
+                      href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=promoter`}
+                      className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
+                    >
                       <div className="flex justify-between items-center">
-                        <Link 
-                          href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=promoter`}
-                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        >
-                          {t.theme.replace('_', ' ')}
-                        </Link>
+                        <div>
+                          <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
+                          <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                        </div>
                         <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -443,8 +444,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="h-full">
+            <CardHeader className="pb-3">
               <CardTitle className="text-red-600">Top detractor themes</CardTitle>
               <CardDescription>
                 Welke onderwerpen noemen detractors het meest?
@@ -454,18 +455,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {themes.detractorThemes.length > 0 ? (
                 <div className="space-y-3">
                   {themes.detractorThemes.map((t, i) => (
-                    <div key={i} className="py-2 border-b last:border-b-0">
+                    <Link 
+                      key={i} 
+                      href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=detractor`}
+                      className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
+                    >
                       <div className="flex justify-between items-center">
-                        <Link 
-                          href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=detractor`}
-                          className="font-medium capitalize text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        >
-                          {t.theme.replace('_', ' ')}
-                        </Link>
+                        <div>
+                          <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
+                          <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                        </div>
                         <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
