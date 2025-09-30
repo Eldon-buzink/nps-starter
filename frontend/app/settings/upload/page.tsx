@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Brain, AlertCircle, CheckCircle, XCircle, Database, FileText } from "lucide-react";
+import SurveyHealth from "@/app/(dashboard)/settings/survey-health";
 
 export default function SettingsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
 
   async function onUpload() {
     if (!file) return;
@@ -135,7 +137,9 @@ export default function SettingsPage() {
           <Button 
             className="w-full" 
             variant="outline"
+            disabled={isEnriching}
             onClick={async () => {
+              setIsEnriching(true);
               try {
                 const response = await fetch('/api/enrich', {
                   method: 'POST',
@@ -149,10 +153,12 @@ export default function SettingsPage() {
                 }
               } catch (error) {
                 alert(`Error: ${error}`);
+              } finally {
+                setIsEnriching(false);
               }
             }}
           >
-            Run Enrichment Now
+            {isEnriching ? "Running AI Enrichment..." : "Run Enrichment Now"}
           </Button>
           
           <div className="text-sm text-muted-foreground">
@@ -161,11 +167,24 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Data Quality Card */}
+      {/* Survey Health Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <AlertCircle className="h-5 w-5 mr-2" />
+            Survey Health
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SurveyHealth />
+        </CardContent>
+      </Card>
+
+      {/* Data Quality Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Database className="h-5 w-5 mr-2" />
             Data Quality
           </CardTitle>
         </CardHeader>

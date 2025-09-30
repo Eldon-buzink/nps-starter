@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { CLASSIFY_SYSTEM_NL, CLASSIFY_USER_TEMPLATE_NL } from "@/lib/npsTaxonomy";
 import { classifyNlStrictJSON, embed } from "@/lib/ai";
+import { generateThemes, DEFAULT_CONFIG } from "@/lib/ai-theme-generation";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,9 +20,34 @@ export async function POST() {
   let processed = 0, skipped_no_comment = 0, failed = 0;
 
   try {
-    console.log('Starting enrichment process...');
+    console.log('Starting hybrid theme enrichment process...');
     
-    // 1) fetch unenriched rows using a simple query
+    // 1) First, discover themes from all responses (not just unenriched ones)
+    console.log('Step 1: Discovering themes from all responses...');
+    const { data: allResponses, error: allError } = await supabaseAdmin
+      .from('nps_response')
+      .select('id, nps_explanation, nps_score')
+      .not('nps_explanation', 'is', null)
+      .limit(1000); // Sample for theme discovery
+
+    if (allError) {
+      console.error('Error fetching responses for theme discovery:', allError);
+      return NextResponse.json({ error: allError.message }, { status: 500 });
+    }
+
+    // Generate themes using hybrid approach
+    const themeResult = await generateThemes(
+      allResponses?.map(r => ({
+        id: r.id,
+        comment: r.nps_explanation || '',
+        nps_score: r.nps_score || 0
+      })) || [],
+      DEFAULT_CONFIG
+    );
+
+    console.log(`Discovered ${themeResult.themes.length} themes:`, themeResult.themes.map(t => t.name));
+    
+    // 2) Now fetch unenriched rows for processing
     const { data: rows, error } = await supabaseAdmin
       .from('nps_response')
       .select(`
@@ -48,7 +74,13 @@ export async function POST() {
 
     if (!rows?.length) {
       console.log('No unenriched rows found');
-      return NextResponse.json({ processed, skipped_no_comment, failed });
+      return NextResponse.json({ 
+        processed, 
+        skipped_no_comment, 
+        failed,
+        themes_discovered: themeResult.themes.length,
+        theme_names: themeResult.themes.map(t => t.name)
+      });
     }
 
     for (const r of rows) {
@@ -58,6 +90,13 @@ export async function POST() {
           continue; 
         }
 
+        // Use discovered themes for classification
+        const availableThemes = themeResult.themes.map(t => t.name);
+        const systemPrompt = CLASSIFY_SYSTEM_NL.replace(
+          'content_kwaliteit, pricing, merkvertrouwen, overige',
+          availableThemes.join(', ')
+        );
+
         const user = CLASSIFY_USER_TEMPLATE_NL({
           survey_type: r.survey_name,
           nps_score: r.nps_score,
@@ -65,7 +104,7 @@ export async function POST() {
           comment: r.nps_explanation,
         });
 
-        const json = await classifyNlStrictJSON(CLASSIFY_SYSTEM_NL, user);
+        const json = await classifyNlStrictJSON(systemPrompt, user);
 
         const promoter_flag = r.nps_score >= 9;
         const passive_flag = r.nps_score >= 7 && r.nps_score <= 8;
@@ -115,7 +154,19 @@ export async function POST() {
       }
     }
 
-    return NextResponse.json({ processed, skipped_no_comment, failed });
+    return NextResponse.json({ 
+      processed, 
+      skipped_no_comment, 
+      failed,
+      themes_discovered: themeResult.themes.length,
+      theme_names: themeResult.themes.map(t => t.name),
+      theme_explanations: themeResult.themes.map(t => ({
+        name: t.name,
+        source: t.source,
+        explanation: t.explanation,
+        businessRelevance: t.businessRelevance
+      }))
+    });
   } catch (error) {
     console.error('Enrichment API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -201,6 +201,12 @@ export function Dashboard() {
             <div className="space-y-4">
               {recentResponses.length > 0 ? (
                 recentResponses.map((response) => {
+                  const getCategoryFromScore = (score: number) => {
+                    if (score >= 9) return 'promoter'
+                    if (score >= 7) return 'passive'
+                    return 'detractor'
+                  }
+                  
                   const getCategoryColor = (category: string) => {
                     switch (category) {
                       case 'promoter': return 'bg-green-500'
@@ -219,11 +225,13 @@ export function Dashboard() {
                     }
                   }
                   
+                  const category = getCategoryFromScore(response.nps_score);
+                  
                   return (
                     <div key={response.id} className="flex items-center space-x-4">
-                      <div className={`w-2 h-2 ${getCategoryColor(response.nps_category)} rounded-full`}></div>
+                      <div className={`w-2 h-2 ${getCategoryColor(category)} rounded-full`}></div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{getCategoryLabel(response.nps_category)} response</p>
+                        <p className="text-sm font-medium">{getCategoryLabel(category)} response</p>
                         <p className="text-xs text-muted-foreground">
                           Score: {response.nps_score} - {response.nps_explanation || 'No comment'}
                         </p>
