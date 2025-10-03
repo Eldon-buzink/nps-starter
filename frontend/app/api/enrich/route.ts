@@ -35,17 +35,17 @@ export async function POST() {
       return NextResponse.json({ error: allError.message }, { status: 500 });
     }
 
-    // Generate themes using hybrid approach
-    const themeResult = await generateThemes(
-      allResponses?.map(r => ({
-        id: r.id,
-        comment: r.nps_explanation || '',
-        nps_score: r.nps_score || 0
-      })) || [],
-      DEFAULT_CONFIG
-    );
+    // Use predefined themes for now (skip AI discovery to avoid API issues)
+    const themeResult = {
+      themes: [
+        { name: 'content_kwaliteit', source: 'base', explanation: 'Content quality feedback', businessRelevance: 'high' },
+        { name: 'pricing', source: 'base', explanation: 'Pricing and subscription feedback', businessRelevance: 'high' },
+        { name: 'merkvertrouwen', source: 'base', explanation: 'Brand trust and credibility', businessRelevance: 'high' },
+        { name: 'overige', source: 'base', explanation: 'Other feedback categories', businessRelevance: 'medium' }
+      ]
+    };
 
-    console.log(`Discovered ${themeResult.themes.length} themes:`, themeResult.themes.map(t => t.name));
+    console.log(`Using ${themeResult.themes.length} predefined themes:`, themeResult.themes.map(t => t.name));
     
     // 2) Now fetch unenriched rows for processing
     const { data: rows, error } = await supabaseAdmin

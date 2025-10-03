@@ -426,9 +426,10 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
                   // Use the theme data directly since it now includes all the explanation data
                   
                   return (
-                    <div 
+                    <Link
                       key={theme.theme}
-                      className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                      href={`/themes/${encodeURIComponent(theme.theme)}`}
+                      className="block border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -512,7 +513,7 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
                           : '📋 This is a predefined business category'
                         }
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
                   </div>
@@ -562,6 +563,27 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* Click on themes above to see detailed analysis */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 text-blue-600 mt-1" />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-2">Need More Details?</h3>
+                <p className="text-sm text-blue-800">
+                  Click on any theme above to see detailed insights including:
+                </p>
+                <ul className="text-sm text-blue-800 mt-2 space-y-1 list-disc list-inside">
+                  <li>Common words and phrases from customer feedback</li>
+                  <li>What promoters say vs what detractors say</li>
+                  <li>Specific examples and quotes</li>
+                  <li>Filtered responses for the selected title</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Empty State */}
         {themes.length === 0 && (

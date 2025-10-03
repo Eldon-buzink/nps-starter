@@ -1,0 +1,51 @@
+
+> nps-insights-frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+
+ ✓ Ready in 1661ms
+ ○ Compiling /api/enrich/route ...
+ ✓ Compiled /api/enrich/route in 566ms (228 modules)
+Starting hybrid theme enrichment process...
+Step 1: Discovering themes from all responses...
+Using 4 predefined themes: [ 'content_kwaliteit', 'pricing', 'merkvertrouwen', 'overige' ]
+Found 100 unenriched rows
+Sample row: {
+  id: 'dccb9acc-f04a-4f1f-85a0-0d2f0aa3a962',
+  survey_name: 'Q1 2024',
+  nps_score: 9,
+  title_text: 'De Telegraaf',
+  nps_explanation: 'Geweldige service, zeer tevreden!',
+  nps_ai_enrichment: []
+}
+(node:65012) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ✓ Compiled /api/test-simple/route in 105ms (31 modules)
+ ✓ Compiled /api/enrich/route in 33ms (230 modules)
+Starting hybrid theme enrichment process...
+Step 1: Discovering themes from all responses...
+Using 4 predefined themes: [ 'content_kwaliteit', 'pricing', 'merkvertrouwen', 'overige' ]
+Found 100 unenriched rows
+Sample row: {
+  id: 'dccb9acc-f04a-4f1f-85a0-0d2f0aa3a962',
+  survey_name: 'Q1 2024',
+  nps_score: 9,
+  title_text: 'De Telegraaf',
+  nps_explanation: 'Geweldige service, zeer tevreden!',
+  nps_ai_enrichment: []
+}
+Starting hybrid theme enrichment process...
+Step 1: Discovering themes from all responses...
+Using 4 predefined themes: [ 'content_kwaliteit', 'pricing', 'merkvertrouwen', 'overige' ]
+Found 100 unenriched rows
+Sample row: {
+  id: 'dccb9acc-f04a-4f1f-85a0-0d2f0aa3a962',
+  survey_name: 'Q1 2024',
+  nps_score: 9,
+  title_text: 'De Telegraaf',
+  nps_explanation: 'Geweldige service, zeer tevreden!',
+  nps_ai_enrichment: []
+}

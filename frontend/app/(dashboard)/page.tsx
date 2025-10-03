@@ -3,7 +3,8 @@ import { getFilterOptions } from "@/lib/filters";
 import FiltersBar from "@/components/filters/FiltersBar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle, Tag } from "lucide-react";
 import Link from 'next/link';
 
 const supabase = createClient(
@@ -137,34 +138,38 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
       // Get sample quotes for each theme
       const promoterThemes = await Promise.all(
         promoters.map(async (theme: any) => {
+          // Get sample quote from v_theme_assignments_normalized joined with nps_response
           const { data: quoteData } = await supabase
-            .from('nps_response')
-            .select('nps_explanation')
-            .gte('nps_score', 9)
-            .contains('nps_ai_enrichment.themes', [theme.theme])
-            .not('nps_explanation', 'is', null)
+            .from('v_theme_assignments_normalized')
+            .select('nps_response!inner(nps_explanation, nps_score)')
+            .eq('canonical_theme', theme.theme)
+            .gte('nps_response.nps_score', 9)
+            .not('nps_response.nps_explanation', 'is', null)
+            .neq('nps_response.nps_explanation', '')
             .limit(1);
           
           return {
             ...theme,
-            sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+            sample_quote: (quoteData?.[0] as any)?.nps_response?.nps_explanation || "Geen voorbeeld beschikbaar"
           };
         })
       );
 
       const detractorThemes = await Promise.all(
         detractors.map(async (theme: any) => {
+          // Get sample quote from v_theme_assignments_normalized joined with nps_response
           const { data: quoteData } = await supabase
-            .from('nps_response')
-            .select('nps_explanation')
-            .lte('nps_score', 6)
-            .contains('nps_ai_enrichment.themes', [theme.theme])
-            .not('nps_explanation', 'is', null)
+            .from('v_theme_assignments_normalized')
+            .select('nps_response!inner(nps_explanation, nps_score)')
+            .eq('canonical_theme', theme.theme)
+            .lte('nps_response.nps_score', 6)
+            .not('nps_response.nps_explanation', 'is', null)
+            .neq('nps_response.nps_explanation', '')
             .limit(1);
           
           return {
             ...theme,
-            sample_quote: quoteData?.[0]?.nps_explanation || "Geen voorbeeld beschikbaar"
+            sample_quote: (quoteData?.[0] as any)?.nps_response?.nps_explanation || "Geen voorbeeld beschikbaar"
           };
         })
       );
@@ -270,17 +275,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         {/* Header Section */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">
-            NPS Insights
+            Monthly Overview
           </h1>
           <p className="text-muted-foreground">
-            Overzicht van de belangrijkste NPS-inzichten voor de gekozen periode. Gebruik dit om snel te zien wat er verbeterd is, wat verslechterd is en welke onderwerpen klanten het meest noemen.
+            Month-over-month changes in NPS performance. Track which titles and themes are improving or declining to understand what drives customer satisfaction.
           </p>
         </div>
 
-
-        {/* KPI Cards Section */}
+        {/* Current Performance Overview */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Algemene bedrijfs NPS-prestaties</h2>
+          <h2 className="text-xl font-semibold">Current Performance Overview</h2>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -334,16 +338,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </div>
 
-        {/* Movers Widget */}
+        {/* Title Movers - Primary Focus */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Top Movers</h2>
+          <h2 className="text-xl font-semibold">Title Performance Changes</h2>
           
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="h-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-green-600">Grootste NPS-stijgers (laatste maand)</CardTitle>
+                <CardTitle className="text-green-600">Biggest NPS Improvers</CardTitle>
                 <CardDescription>
-                  We tonen de laatste maand met ≥ 30 reacties.
+                  Titles with the largest NPS increases this month
                 </CardDescription>
               </CardHeader>
             <CardContent>
@@ -352,7 +356,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {movers.filter((m: any) => m.delta > 0).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/analysis?title=${encodeURIComponent(m.title_text)}`}
+                      href={`/titles/${encodeURIComponent(m.title_text)}`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
@@ -367,16 +371,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Geen significante NPS-stijgers gevonden.</p>
+                <p className="text-sm text-muted-foreground">No significant NPS improvements found.</p>
               )}
             </CardContent>
           </Card>
 
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-red-600">Grootste NPS-dalers (laatste maand)</CardTitle>
+              <CardTitle className="text-red-600">Biggest NPS Decliners</CardTitle>
               <CardDescription>
-                We tonen de laatste maand met ≥ 30 reacties.
+                Titles with the largest NPS decreases this month
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -385,7 +389,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {movers.filter((m: any) => m.delta < 0).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/analysis?title=${encodeURIComponent(m.title_text)}`}
+                      href={`/titles/${encodeURIComponent(m.title_text)}`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
@@ -400,23 +404,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Geen significante NPS-dalers gevonden.</p>
+                <p className="text-sm text-muted-foreground">No significant NPS declines found.</p>
               )}
             </CardContent>
           </Card>
           </div>
         </div>
 
-        {/* Top Themes */}
+        {/* Theme Movers - Secondary Focus */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Top Thema's</h2>
+          <h2 className="text-xl font-semibold">Theme Performance Changes</h2>
           
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="h-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-green-600">Top promoter themes</CardTitle>
+                <CardTitle className="text-green-600">Top Promoter Themes</CardTitle>
                 <CardDescription>
-                  Welke onderwerpen noemen promoters het meest?
+                  Themes driving positive feedback this month
                 </CardDescription>
               </CardHeader>
             <CardContent>
@@ -425,7 +429,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {themes.promoterThemes.map((t, i) => (
                     <Link 
                       key={i} 
-                      href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=promoter`}
+                      href={`/themes/${encodeURIComponent(t.theme)}`}
                       className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
                     >
                       <div className="flex justify-between items-center">
@@ -439,16 +443,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Geen thema's in deze periode.</p>
+                <p className="text-sm text-muted-foreground">No promoter themes identified.</p>
               )}
             </CardContent>
           </Card>
 
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-red-600">Top detractor themes</CardTitle>
+              <CardTitle className="text-red-600">Top Detractor Themes</CardTitle>
               <CardDescription>
-                Welke onderwerpen noemen detractors het meest?
+                Themes driving negative feedback this month
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -457,7 +461,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {themes.detractorThemes.map((t, i) => (
                     <Link 
                       key={i} 
-                      href={`/themes?theme=${encodeURIComponent(t.theme)}&nps_bucket=detractor`}
+                      href={`/themes/${encodeURIComponent(t.theme)}`}
                       className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
                     >
                       <div className="flex justify-between items-center">
@@ -471,10 +475,74 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Geen thema's in deze periode.</p>
+                <p className="text-sm text-muted-foreground">No detractor themes identified.</p>
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Quick Actions</h2>
+          
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Users className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Explore All Titles</h3>
+                    <p className="text-sm text-muted-foreground">Browse and analyze all titles and their performance</p>
+                  </div>
+                  <Link href="/titles">
+                    <Button variant="outline" size="sm">
+                      View Titles
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Tag className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Explore All Themes</h3>
+                    <p className="text-sm text-muted-foreground">Browse and analyze all themes across your data</p>
+                  </div>
+                  <Link href="/themes">
+                    <Button variant="outline" size="sm">
+                      View Themes
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Browse Responses</h3>
+                    <p className="text-sm text-muted-foreground">Read individual customer feedback and responses</p>
+                  </div>
+                  <Link href="/responses">
+                    <Button variant="outline" size="sm">
+                      View Responses
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Executive Summary */}

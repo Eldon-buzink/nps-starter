@@ -1,0 +1,110 @@
+
+> nps-insights-frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 14.0.0
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+
+ ✓ Ready in 1430ms
+ ○ Compiling /(dashboard)/page ...
+ ✓ Compiled /(dashboard)/page in 1912ms (645 modules)
+HomePage: Fetching data with params: { start: '2024-01-01', end: '2025-12-31', survey: null, title: null }
+getMovers called with params: { start: '2024-01-01', end: '2025-12-31', survey: null, title: null }
+getMovers RPC result: {
+  rpcData: [
+    {
+      title_text: 'BN DeStem',
+      current_nps: -17.1,
+      previous_nps: -46.2,
+      delta: 29.1,
+      current_responses: 41,
+      previous_responses: 52
+    },
+    {
+      title_text: 'het ED',
+      current_nps: -39.1,
+      previous_nps: -20,
+      delta: -19.1,
+      current_responses: 46,
+      previous_responses: 40
+    },
+    {
+      title_text: 'Het Laatste Nieuws',
+      current_nps: -5.5,
+      previous_nps: 8.6,
+      delta: -14.1,
+      current_responses: 110,
+      previous_responses: 116
+    },
+    {
+      title_text: 'de Gelderlander',
+      current_nps: -23.9,
+      previous_nps: -37.5,
+      delta: 13.6,
+      current_responses: 71,
+      previous_responses: 32
+    },
+    {
+      title_text: 'de Stentor',
+      current_nps: -27.8,
+      previous_nps: -33.3,
+      delta: 5.5,
+      current_responses: 36,
+      previous_responses: 30
+    }
+  ],
+  rpcError: null
+}
+getMovers returning RPC data: 5 items
+ ✓ Compiled in 121ms (283 modules)
+HomePage: Results: {
+  kpis: 'found',
+  moversCount: 5,
+  moversData: [
+    {
+      title_text: 'BN DeStem',
+      current_nps: -17.1,
+      previous_nps: -46.2,
+      delta: 29.1,
+      current_responses: 41,
+      previous_responses: 52
+    },
+    {
+      title_text: 'het ED',
+      current_nps: -39.1,
+      previous_nps: -20,
+      delta: -19.1,
+      current_responses: 46,
+      previous_responses: 40
+    },
+    {
+      title_text: 'Het Laatste Nieuws',
+      current_nps: -5.5,
+      previous_nps: 8.6,
+      delta: -14.1,
+      current_responses: 110,
+      previous_responses: 116
+    },
+    {
+      title_text: 'de Gelderlander',
+      current_nps: -23.9,
+      previous_nps: -37.5,
+      delta: 13.6,
+      current_responses: 71,
+      previous_responses: 32
+    },
+    {
+      title_text: 'de Stentor',
+      current_nps: -27.8,
+      previous_nps: -33.3,
+      delta: 5.5,
+      current_responses: 36,
+      previous_responses: 30
+    }
+  ],
+  themesCount: 6,
+  coverage: 'found'
+}
+ ✓ Compiled /not-found in 398ms (636 modules)
+[?25h

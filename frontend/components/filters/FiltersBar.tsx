@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 
 export default function FiltersBar({
-  surveys, titles,
-}: { surveys: string[]; titles: string[] }) {
+  surveys, titles, defaultTitle,
+}: { surveys: string[]; titles: string[]; defaultTitle?: string }) {
   const router = useRouter();
   const sp = useSearchParams();
 
   const [survey, setSurvey] = useState(sp.get("survey") ?? "");
-  const [title, setTitle]   = useState(sp.get("title") ?? "");
+  const [title, setTitle]   = useState(sp.get("title") ?? defaultTitle ?? "");
   const [start, setStart]   = useState(sp.get("start") ?? "");
   const [end, setEnd]       = useState(sp.get("end") ?? "");
 

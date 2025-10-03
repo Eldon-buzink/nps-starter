@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { BarChart3, Upload, Settings, Home, MessageSquare, Tag, TrendingUp, Brain, Search } from "lucide-react"
+import { BarChart3, Upload, Settings, Home, MessageSquare, Tag, TrendingUp, Brain, Search, Users } from "lucide-react"
 
 export function Navigation() {
   return (
@@ -16,34 +16,22 @@ export function Navigation() {
               <span className="text-xl font-bold">NPS Insights</span>
             </Link>
             <div className="hidden md:flex items-center space-x-6">
-              <Link href="/">
+              <Link href="/titles">
                 <Button variant="ghost" className="flex items-center space-x-2">
-                  <Home className="h-4 w-4" />
-                  <span>Home</span>
-                </Button>
-              </Link>
-              <Link href="/analysis">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <Search className="h-4 w-4" />
-                  <span>Analysis</span>
+                  <Users className="h-4 w-4" />
+                  <span>Title Explorer</span>
                 </Button>
               </Link>
               <Link href="/themes">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Tag className="h-4 w-4" />
-                  <span>Themes</span>
+                  <span>Theme Explorer</span>
                 </Button>
               </Link>
               <Link href="/responses">
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4" />
-                  <span>Responses</span>
-                </Button>
-              </Link>
-              <Link href="/trends">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Trends</span>
+                  <span>Response Explorer</span>
                 </Button>
               </Link>
             </div>

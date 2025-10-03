@@ -130,6 +130,36 @@ See [docs/DATA_MODEL.md](docs/DATA_MODEL.md) for the complete data model.
 4. **Review Themes**: See AI-extracted themes and sentiment
 5. **Export Reports**: Generate and share insights
 
+## AI Enrichment Worker
+
+### One-time DB setup
+In the Supabase SQL editor, paste & run the contents of:
+`db/ai_enrichment_setup.sql`
+(Then you should see a `pg_notify` result; that's expected.)
+
+### Env vars
+```bash
+export OPENAI_API_KEY=sk-***
+export SUPABASE_URL=...                  # REST URL from project settings
+export SUPABASE_SERVICE_ROLE_KEY=...     # service role (server-only)
+# Optional tuning:
+export OPENAI_MODEL=gpt-4o-mini
+export BATCH_SIZE=300
+export MAX_RPM=180
+```
+
+### Run enrichment
+```bash
+python direct_enrich.py
+```
+
+### Notes
+- **Dynamic themes**: fetches existing themes, adds new ones when nothing fits.
+- **No JSON-schema cache**: uses response_format={"type": "json_object"}.
+- **Idempotent & FK-safe**: via RPC upsert (primary key on response_id).
+- **Won't loop forever**: exits after MAX_EMPTY_BATCHES empty pulls.
+- **Progress logs**: every 100 rows.
+
 ## 🛠️ Development
 
 ### Adding New Features
