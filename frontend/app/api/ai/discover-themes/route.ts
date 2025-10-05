@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
 export async function POST(req: NextRequest) {
   try {
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI API key not available during build');
+      return NextResponse.json({ 
+        error: 'OpenAI API key not configured',
+        themes: []
+      }, { status: 503 });
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
     const { prompt, responses, config } = await req.json();
     
     console.log('AI Theme Discovery: Processing', responses.length, 'responses');
