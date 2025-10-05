@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node -e \"console.log('Using tsconfig at:', require('path').resolve('tsconfig.json'))\" && cat tsconfig.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
