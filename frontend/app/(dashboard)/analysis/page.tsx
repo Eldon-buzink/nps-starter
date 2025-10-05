@@ -184,7 +184,7 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
           }
           themeMap[theme].count++;
           themeMap[theme].totalSentiment += row.sentiment_score || 0;
-          themeMap[theme].totalNps += row.nps_response.nps_score || 0;
+          themeMap[theme].totalNps += (row.nps_response && row.nps_response[0]?.nps_score) || 0;
           themeMap[theme].responses.add(row.response_id);
         });
       }
@@ -422,9 +422,9 @@ export default async function AnalysisPage({ searchParams }: AnalysisPageProps) 
                         {new Date(response.creation_date).toLocaleDateString('nl-NL')}
                       </span>
                     </div>
-                    {response.nps_ai_enrichment?.themes && (
+                    {response.nps_ai_enrichment && response.nps_ai_enrichment[0]?.themes && (
                       <div className="flex flex-wrap gap-1">
-                        {response.nps_ai_enrichment.themes.slice(0, 2).map((theme: string, idx: number) => (
+                        {response.nps_ai_enrichment[0].themes.slice(0, 2).map((theme: string, idx: number) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {theme.replace('_', ' ')}
                           </Badge>

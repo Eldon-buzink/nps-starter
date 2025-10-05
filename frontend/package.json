@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "prebuild": "node -e \"console.log('Using tsconfig at:', require('path').resolve('tsconfig.json'))\" && cat tsconfig.json",
+    "prebuild:imports": "node ./scripts/check-imports.mjs",
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run prebuild:imports && next build",
     "start": "next start",
     "lint": "next lint"
   },
