@@ -73,8 +73,8 @@ export async function getThemesAggregate(
     enrichmentData.forEach(row => {
       const themes = row.themes || [];
       const sentiment = row.sentiment_score || 0;
-      const npsScore = row.nps_response?.nps_score || 0;
-      const category = row.nps_response?.nps_category || 'passive';
+      const npsScore = row.nps_response && row.nps_response[0]?.nps_score || 0;
+      const category = row.nps_response && row.nps_response[0]?.nps_category || 'passive';
 
       themes.forEach((theme: string) => {
         if (!themeMap.has(theme)) {
