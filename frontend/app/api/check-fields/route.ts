@@ -23,7 +23,7 @@ export async function GET() {
     
     // Check if there are any date fields that might contain the original survey dates
     const firstRow = sampleData?.[0];
-    const dateFields = [];
+    const dateFields: Array<{field: string, value: string}> = [];
     
     if (firstRow) {
       Object.keys(firstRow).forEach(key => {

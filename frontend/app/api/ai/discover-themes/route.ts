@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
  * Fallback function to extract themes from text when JSON parsing fails
  */
 function extractThemesFromText(text: string): Array<{name: string, confidence: number, explanation: string}> {
-  const themes = [];
+  const themes: Array<{name: string, confidence: number, explanation: string}> = [];
   
   // Look for JSON-like patterns in the text
   try {

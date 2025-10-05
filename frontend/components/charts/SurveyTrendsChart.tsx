@@ -17,13 +17,13 @@ export function SurveyTrendsChart({ data }: SurveyTrendsChartProps) {
   }
 
   // Group data by month and create series for each survey
-  const monthlyData = new Map<string, { [key: string]: number }>();
+  const monthlyData = new Map<string, { [key: string]: number | string }>();
   const surveys = new Set<string>();
 
   data.forEach(item => {
     const month = item.month;
     if (!monthlyData.has(month)) {
-      monthlyData.set(month, { month });
+      monthlyData.set(month, { month: month });
     }
     monthlyData.get(month)![item.survey] = item.nps;
     surveys.add(item.survey);
@@ -32,7 +32,7 @@ export function SurveyTrendsChart({ data }: SurveyTrendsChartProps) {
   const chartData = Array.from(monthlyData.values())
     .map(item => {
       // Ensure proper date parsing for sorting
-      const dateStr = item.month.includes('-') ? item.month : item.month + '-01';
+      const dateStr = String(item.month).includes('-') ? String(item.month) : String(item.month) + '-01';
       const date = new Date(dateStr);
       return {
         ...item,

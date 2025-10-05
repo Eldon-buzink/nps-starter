@@ -73,7 +73,7 @@ export async function GET() {
     
     // Find biggest movers (comparing last 2 months)
     const months = Object.keys(monthlyNps).sort();
-    const movers = [];
+    const movers: Array<{title: string, current_nps: number, previous_nps: number, delta: number, current_responses: number, previous_responses: number}> = [];
     
     if (months.length >= 2) {
       const lastMonth = months[months.length - 1];

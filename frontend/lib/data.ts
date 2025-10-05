@@ -120,7 +120,7 @@ export async function getNpsSummary(): Promise<NpsSummary | null> {
     const avg_score = avgData ? avgData.reduce((sum, row) => sum + row.nps_score, 0) / avgData.length : 0;
     
     // Calculate NPS score
-    const nps_score = total_responses > 0 ? ((promoters - detractors) / total_responses) * 100 : 0;
+    const nps_score = (total_responses || 0) > 0 ? (((promoters || 0) - (detractors || 0)) / (total_responses || 1)) * 100 : 0;
     
     return {
       total_responses: total_responses || 0,

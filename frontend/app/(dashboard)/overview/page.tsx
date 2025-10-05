@@ -10,7 +10,8 @@ import { CalendarIcon, TrendingUp, Users, MessageSquare, BarChart3, Filter, Down
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import WinnersLosers from '@/components/WinnersLosers'
-import { getNpsSummary, getMonthlyTrends, getNpsBySurvey, getNpsByTitle, getMomMoves } from '@/lib/data'
+import { getNpsSummary, getMonthlyTrends, getNpsBySurvey, getNpsByTitle } from '@/lib/data'
+import { getTopTitleMoMMoves } from '@/lib/winners-losers'
 
 interface OverviewPageProps {
   searchParams: {
@@ -28,7 +29,7 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
     getMonthlyTrends(searchParams.start, searchParams.end),
     getNpsBySurvey(),
     getNpsByTitle(),
-    getMomMoves(searchParams.start, searchParams.end, 30, 5)
+    getTopTitleMoMMoves({ start: searchParams.start, end: searchParams.end, minResponses: 30, topK: 5 })
   ])
 
   // Transform data for display
@@ -51,7 +52,8 @@ export default async function OverviewPage({ searchParams }: OverviewPageProps) 
   const transformedMonthlyTrends = monthlyTrends.map(trend => ({
     month: new Date(trend.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
     nps: trend.nps_score,
-    responses: trend.total_responses
+    responses: trend.total_responses,
+    change: 0 // We don't have historical data for change calculation yet
   }))
 
   const transformedSurveyData = surveyData.map(survey => ({
