@@ -57,7 +57,7 @@ async function getTitleThemes(title: string, params: {start?:string,end?:string,
     });
 
     // Calculate NPS, avg score, and add metadata for each theme
-    const themes = Array.from(themeMap.values()).map(themeData => {
+    const themes = await Promise.all(Array.from(themeMap.values()).map(async (themeData) => {
       const avg_score = themeData.nps_scores.reduce((sum: number, score: number) => sum + score, 0) / themeData.nps_scores.length;
       
       // Determine source and business relevance based on theme name
@@ -126,7 +126,7 @@ async function getTitleThemes(title: string, params: {start?:string,end?:string,
         count_responses: themeData.title_mentions,
         share_pct: 0 // Will be calculated if needed
       };
-    });
+    }));
 
     return themes.sort((a, b) => b.title_mentions - a.title_mentions).slice(0, 10); // Top 10 themes
   } catch (error) {
