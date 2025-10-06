@@ -29,7 +29,6 @@ function getLastFullMonth() {
 // Get themes data from normalized view with enhanced explanations
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    console.log('Getting normalized themes with params:', params);
     
     // Use the normalized view that handles synonyms and "Other (cluster)" collapsing
     const { data, error } = await supabase
@@ -37,7 +36,6 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
       .select('*')
       .order('mentions', { ascending: false });
     
-    console.log('Normalized themes query result:', { dataCount: data?.length, error });
     
     if (error) {
       console.error('Normalized themes query error:', error);
@@ -73,14 +71,20 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
             .eq('canonical_theme', row.theme)
             .limit(5);
 
-          // Extract keywords from sample responses
+          // Extract meaningful keywords from sample responses
           const keywords = new Set<string>();
+          const stopWords = new Set([
+            'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'oil', 'sit', 'try', 'use', 'why', 'let', 'put', 'say', 'she', 'too', 'use',
+            // Dutch stop words
+            'een', 'van', 'de', 'het', 'is', 'op', 'te', 'in', 'aan', 'met', 'voor', 'dat', 'niet', 'zijn', 'als', 'er', 'maar', 'dan', 'ook', 'nog', 'over', 'heeft', 'hebben', 'wordt', 'worden', 'kan', 'kunnen', 'moet', 'moeten', 'zal', 'zullen', 'zou', 'zouden', 'heb', 'heeft', 'had', 'hadden', 'was', 'waren', 'ben', 'bent', 'is', 'zijn', 'dit', 'die', 'deze', 'dat', 'zo', 'wel', 'niet', 'geen', 'alle', 'alleen', 'altijd', 'al', 'ook', 'nog', 'weer', 'meer', 'veel', 'weinig', 'groot', 'klein', 'goed', 'slecht', 'nieuw', 'oud', 'jong', 'laat', 'vroeg', 'lang', 'kort', 'hoog', 'laag', 'breed', 'smal', 'dik', 'dun', 'warm', 'koud', 'hete', 'koude', 'nat', 'droog', 'schoon', 'vuil', 'mooi', 'lelijk', 'leuk', 'saai', 'interessant', 'belangrijk', 'nuttig', 'handig', 'makkelijk', 'moeilijk', 'duur', 'goedkoop', 'snel', 'langzaam', 'sterk', 'zwak', 'zwaar', 'licht', 'vol', 'leeg', 'open', 'dicht', 'binnen', 'buiten', 'boven', 'onder', 'links', 'rechts', 'voor', 'achter', 'naast', 'tussen', 'door', 'over', 'onder', 'boven', 'rond', 'om', 'naar', 'van', 'tot', 'sinds', 'tijdens', 'voor', 'na', 'tijd', 'uur', 'dag', 'week', 'maand', 'jaar', 'morgen', 'gisteren', 'vandaag', 'morgen', 'avond', 'ochtend', 'middag', 'nacht'
+          ]);
+          
           sampleResponses?.forEach((response: any) => {
             const text = response.nps_response.nps_explanation?.toLowerCase() || '';
             // Extract meaningful words (3+ characters, not common words)
             const words = text.match(/\b\w{3,}\b/g) || [];
             words.forEach((word: string) => {
-              if (!['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'oil', 'sit', 'try', 'use', 'why', 'let', 'put', 'say', 'she', 'too', 'use'].includes(word)) {
+              if (!stopWords.has(word) && word.length >= 3) {
                 keywords.add(word);
               }
             });
@@ -478,15 +482,15 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
 
                       {/* Detailed Metrics */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">Volume:</span>
                           <span className="font-medium">{theme.count_responses || 0}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">Share:</span>
                           <span className="font-medium">{theme.share_pct?.toFixed(1) || 0}%</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">Avg NPS:</span>
                           <span className={`font-medium ${
                             (theme.avg_nps || 0) >= 7 ? 'text-green-600' : 
@@ -495,7 +499,7 @@ export default async function ThemesPage({ searchParams }: ThemesPageProps) {
                             {(theme.avg_nps || 0).toFixed(1)}
                           </span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">Sentiment:</span>
                           <span className={`font-medium ${
                             (theme.avg_sentiment || 0) > 0 ? 'text-green-600' : 

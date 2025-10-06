@@ -45,7 +45,6 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     }
     
     // Fallback to direct query
-    console.log('RPC failed, using direct query fallback');
     let query = supabase
       .from('nps_response')
       .select('nps_score')
@@ -82,7 +81,6 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
 // Get Movers from top_title_mom_moves (with fallback)
 async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    console.log('getMovers called with params:', params);
     
     // Try RPC first
     const { data: rpcData, error: rpcError } = await supabase.rpc('top_title_mom_moves', {
@@ -94,15 +92,12 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_top_k: 5
     });
     
-    console.log('getMovers RPC result:', { rpcData, rpcError });
     
     if (!rpcError && rpcData) {
-      console.log('getMovers returning RPC data:', rpcData.length, 'items');
       return rpcData;
     }
     
     // Fallback: return empty array for now (would need complex month-over-month calculation)
-    console.log('RPC failed for movers, returning empty array');
     return [];
   } catch (error) {
     console.error('Error in getMovers:', error);
@@ -178,7 +173,6 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
     }
     
     // Fallback: return empty arrays
-    console.log('RPC failed for themes, returning empty arrays');
     return { promoterThemes: [], detractorThemes: [] };
   } catch (error) {
     console.error('Error in getTopThemes:', error);
@@ -242,7 +236,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const survey = searchParams?.survey ?? null;
   const title = searchParams?.title ?? null;
 
-  console.log('HomePage: Fetching data with params:', { start, end, survey, title });
   
   // Fetch all data in parallel
   const [kpis, movers, themes, coverage] = await Promise.all([
@@ -252,20 +245,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     getDataCoverage({ start, end, survey, title })
   ]);
   
-  console.log('HomePage: Results:', {
-    kpis: kpis ? 'found' : 'null',
-    moversCount: movers?.length || 0,
-    moversData: movers,
-    themesCount: (themes?.promoterThemes?.length || 0) + (themes?.detractorThemes?.length || 0),
-    coverage: coverage ? 'found' : 'null'
-  });
   
-  // Client-side debugging
-  if (typeof window !== 'undefined') {
-    console.log('CLIENT: HomePage movers data:', movers);
-    console.log('CLIENT: HomePage movers length:', movers?.length);
-    console.log('CLIENT: HomePage movers type:', typeof movers);
-  }
 
   const getCategoryPercentage = (count: number, total: number) => 
     total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";

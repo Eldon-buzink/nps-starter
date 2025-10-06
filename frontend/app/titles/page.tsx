@@ -117,10 +117,10 @@ async function getTitleCoverage(title: string, params: {start?:string,end?:strin
       .not('nps_explanation', 'is', null)
       .neq('nps_explanation', '');
 
-    // Responses with themes (enriched)
+    // Responses with themes (enriched) - check nps_ai_enrichment table
     const { data: enrichedData, error: enrichedError } = await supabase
-      .from('v_theme_assignments_normalized')
-      .select('response_id', { count: 'exact', head: false })
+      .from('nps_ai_enrichment')
+      .select('response_id, nps_response!inner(title_text, creation_date)', { count: 'exact', head: false })
       .eq('nps_response.title_text', title)
       .gte('nps_response.creation_date', params.start || '2024-01-01')
       .lte('nps_response.creation_date', params.end || '2025-12-31');
@@ -410,47 +410,6 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
           )}
         </div>
 
-        {/* Data Coverage Info */}
-        {title && coverage && (
-          <Card className="bg-amber-50 border-amber-200">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 mt-1" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-amber-900 mb-2">Data Coverage for {title}</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-amber-800 font-medium">Total Responses</p>
-                      <p className="text-2xl font-bold text-amber-900">{coverage.total}</p>
-                    </div>
-                    <div>
-                      <p className="text-amber-800 font-medium">With Comments</p>
-                      <p className="text-2xl font-bold text-amber-900">{coverage.withComments}</p>
-                      <p className="text-xs text-amber-700">{coverage.percentWithComments.toFixed(1)}% of total</p>
-                    </div>
-                    <div>
-                      <p className="text-amber-800 font-medium">AI Enriched</p>
-                      <p className="text-2xl font-bold text-amber-900">{coverage.enriched}</p>
-                      <p className="text-xs text-amber-700">{coverage.percentEnriched.toFixed(1)}% of comments</p>
-                    </div>
-                    <div>
-                      <p className="text-amber-800 font-medium">Theme Coverage</p>
-                      <p className="text-2xl font-bold text-amber-900">
-                        {coverage.total > 0 ? ((coverage.enriched / coverage.total) * 100).toFixed(1) : 0}%
-                      </p>
-                      <p className="text-xs text-amber-700">of all responses</p>
-                    </div>
-                  </div>
-                  {coverage.percentEnriched < 100 && (
-                    <p className="text-xs text-amber-700 mt-3">
-                      ℹ️ Not all responses have been AI-enriched yet. Only responses with comments can be analyzed for themes.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Themes Section */}
         <div className="space-y-4">
@@ -619,6 +578,48 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
             </Card>
           )}
         </div>
+
+        {/* Data Coverage Info */}
+        {title && coverage && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 mb-2">Data Coverage for {title}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-amber-800 font-medium">Total Responses</p>
+                      <p className="text-2xl font-bold text-amber-900">{coverage.total}</p>
+                    </div>
+                    <div>
+                      <p className="text-amber-800 font-medium">With Comments</p>
+                      <p className="text-2xl font-bold text-amber-900">{coverage.withComments}</p>
+                      <p className="text-xs text-amber-700">{coverage.percentWithComments.toFixed(1)}% of total</p>
+                    </div>
+                    <div>
+                      <p className="text-amber-800 font-medium">AI Enriched</p>
+                      <p className="text-2xl font-bold text-amber-900">{coverage.enriched}</p>
+                      <p className="text-xs text-amber-700">{coverage.percentEnriched.toFixed(1)}% of comments</p>
+                    </div>
+                    <div>
+                      <p className="text-amber-800 font-medium">Theme Coverage</p>
+                      <p className="text-2xl font-bold text-amber-900">
+                        {coverage.total > 0 ? ((coverage.enriched / coverage.total) * 100).toFixed(1) : 0}%
+                      </p>
+                      <p className="text-xs text-amber-700">of all responses</p>
+                    </div>
+                  </div>
+                  {coverage.percentEnriched < 100 && (
+                    <p className="text-xs text-amber-700 mt-3">
+                      ℹ️ Not all responses have been AI-enriched yet. Only responses with comments can be analyzed for themes.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
     </div>
   );
