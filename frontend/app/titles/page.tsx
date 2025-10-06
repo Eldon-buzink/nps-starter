@@ -65,12 +65,51 @@ async function getTitleThemes(title: string, params: {start?:string,end?:string,
       const source = isBaseTheme ? 'base' : 'ai';
       const businessRelevance = themeData.title_mentions >= 5 ? 'high' : themeData.title_mentions >= 3 ? 'medium' : 'low';
       
-      // Generate explanation based on theme
+      // Generate explanation based on theme (enhanced with keywords)
       let explanation = '';
       if (source === 'base') {
         explanation = `Predefined business category for ${themeData.theme.replace('_', ' ')} feedback`;
       } else {
-        explanation = `AI-discovered theme from customer feedback analysis. This theme emerged from multiple responses indicating ${themeData.theme.replace('_', ' ')} as a key concern.`;
+        // For AI themes, get sample keywords from actual responses
+        try {
+          const { data: sampleResponses } = await supabase
+            .from('v_theme_assignments_normalized')
+            .select(`
+              nps_response!inner(nps_explanation)
+            `)
+            .eq('canonical_theme', themeData.theme)
+            .eq('nps_response.title_text', title)
+            .limit(5);
+
+          // Extract meaningful keywords from sample responses
+          const keywords = new Set<string>();
+          const stopWords = new Set([
+            'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'oil', 'sit', 'try', 'use', 'why', 'let', 'put', 'say', 'she', 'too', 'use',
+            // Dutch stop words
+            'een', 'van', 'de', 'het', 'is', 'op', 'te', 'in', 'aan', 'met', 'voor', 'dat', 'niet', 'zijn', 'als', 'er', 'maar', 'dan', 'ook', 'nog', 'over', 'heeft', 'hebben', 'wordt', 'worden', 'kan', 'kunnen', 'moet', 'moeten', 'zal', 'zullen', 'zou', 'zouden', 'heb', 'heeft', 'had', 'hadden', 'was', 'waren', 'ben', 'bent', 'is', 'zijn', 'dit', 'die', 'deze', 'dat', 'zo', 'wel', 'niet', 'geen', 'alle', 'alleen', 'altijd', 'al', 'ook', 'nog', 'weer', 'meer', 'veel', 'weinig', 'groot', 'klein', 'goed', 'slecht', 'nieuw', 'oud', 'jong', 'laat', 'vroeg', 'lang', 'kort', 'hoog', 'laag', 'breed', 'smal', 'dik', 'dun', 'warm', 'koud', 'hete', 'koude', 'nat', 'droog', 'schoon', 'vuil', 'mooi', 'lelijk', 'leuk', 'saai', 'interessant', 'belangrijk', 'nuttig', 'handig', 'makkelijk', 'moeilijk', 'duur', 'goedkoop', 'snel', 'langzaam', 'sterk', 'zwak', 'zwaar', 'licht', 'vol', 'leeg', 'open', 'dicht', 'binnen', 'buiten', 'boven', 'onder', 'links', 'rechts', 'voor', 'achter', 'naast', 'tussen', 'door', 'over', 'onder', 'boven', 'rond', 'om', 'naar', 'van', 'tot', 'sinds', 'tijdens', 'voor', 'na', 'tijd', 'uur', 'dag', 'week', 'maand', 'jaar', 'morgen', 'gisteren', 'vandaag', 'morgen', 'avond', 'ochtend', 'middag', 'nacht'
+          ]);
+          
+          sampleResponses?.forEach((response: any) => {
+            const text = response.nps_response.nps_explanation?.toLowerCase() || '';
+            // Extract meaningful words (3+ characters, not common words)
+            const words = text.match(/\b\w{3,}\b/g) || [];
+            words.forEach((word: string) => {
+              if (!stopWords.has(word) && word.length >= 3) {
+                keywords.add(word);
+              }
+            });
+          });
+
+          const keywordList = Array.from(keywords).slice(0, 5);
+          const keywordText = keywordList.length > 0 
+            ? ` based on keywords like "${keywordList.join('", "')}"`
+            : ' based on common patterns in customer feedback';
+
+          explanation = `AI-discovered theme from customer feedback analysis${keywordText}. This theme emerged from multiple responses indicating ${themeData.theme.replace('_', ' ')} as a key concern.`;
+        } catch (keywordError) {
+          console.error('Error fetching keywords for theme:', themeData.theme, keywordError);
+          explanation = `AI-discovered theme from customer feedback analysis. This theme emerged from multiple responses indicating ${themeData.theme.replace('_', ' ')} as a key concern.`;
+        }
       }
       
       // Calculate sentiment (simplified)
