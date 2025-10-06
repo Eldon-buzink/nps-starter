@@ -127,3 +127,4 @@ Sample row: {
    - Environments: .env.local
 
  ✓ Ready in 1569ms
+[?25h
