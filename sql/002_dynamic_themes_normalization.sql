@@ -24,21 +24,21 @@ values
   ('subscription','pricing'),
 
   -- Delivery/Shipping related
-  ('levering','delivery'),
-  ('delivery','delivery'),
-  ('bezorging','delivery'),
-  ('verzending','delivery'),
-  ('shipping','delivery'),
-  ('laat','delivery'),
-  ('vertraging','delivery'),
+  ('levering','bezorging'),
+  ('delivery','bezorging'),
+  ('bezorging','bezorging'),
+  ('verzending','bezorging'),
+  ('shipping','bezorging'),
+  ('laat','bezorging'),
+  ('vertraging','bezorging'),
 
   -- Support/Service related
-  ('support','support'),
-  ('klantenservice','support'),
-  ('service','support'),
-  ('helpdesk','support'),
-  ('hulp','support'),
-  ('assistentie','support'),
+  ('support','klantenservice'),
+  ('klantenservice','klantenservice'),
+  ('service','klantenservice'),
+  ('helpdesk','klantenservice'),
+  ('hulp','klantenservice'),
+  ('assistentie','klantenservice'),
 
   -- Technical/Stability related
   ('bug','stability'),
@@ -50,13 +50,13 @@ values
   ('technisch','stability'),
 
   -- UX/Usability related
-  ('gebruiksvriendelijkheid','ux'),
-  ('usability','ux'),
-  ('ui','ux'),
-  ('design','ux'),
-  ('navigatie','ux'),
-  ('interface','ux'),
-  ('gebruik','ux'),
+  ('gebruiksvriendelijkheid','app_ux'),
+  ('usability','app_ux'),
+  ('ui','app_ux'),
+  ('design','app_ux'),
+  ('navigatie','app_ux'),
+  ('interface','app_ux'),
+  ('gebruik','app_ux'),
 
   -- Content Quality related
   ('content','content_kwaliteit'),

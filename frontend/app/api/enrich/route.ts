@@ -35,13 +35,17 @@ export async function POST() {
       return NextResponse.json({ error: allError.message }, { status: 500 });
     }
 
-    // Use predefined themes for now (skip AI discovery to avoid API issues)
+    // Use the proper Dutch taxonomy from npsTaxonomy.ts
     const themeResult = {
       themes: [
-        { name: 'content_kwaliteit', source: 'base', explanation: 'Content quality feedback', businessRelevance: 'high' },
         { name: 'pricing', source: 'base', explanation: 'Pricing and subscription feedback', businessRelevance: 'high' },
+        { name: 'bezorging', source: 'base', explanation: 'Delivery and shipping feedback', businessRelevance: 'high' },
+        { name: 'content_kwaliteit', source: 'base', explanation: 'Content quality feedback', businessRelevance: 'high' },
+        { name: 'klantenservice', source: 'base', explanation: 'Customer service feedback', businessRelevance: 'high' },
+        { name: 'app_ux', source: 'base', explanation: 'App user experience feedback', businessRelevance: 'medium' },
+        { name: 'aboflexibiliteit', source: 'base', explanation: 'Subscription flexibility feedback', businessRelevance: 'medium' },
         { name: 'merkvertrouwen', source: 'base', explanation: 'Brand trust and credibility', businessRelevance: 'high' },
-        { name: 'overige', source: 'base', explanation: 'Other feedback categories', businessRelevance: 'medium' }
+        { name: 'overige', source: 'base', explanation: 'Other feedback categories', businessRelevance: 'low' }
       ]
     };
 
