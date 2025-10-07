@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle, Ar
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import ThemeSummary from '@/components/ThemeSummary';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -240,10 +241,11 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
   console.log('ThemePage: Fetching data for theme:', theme, 'with params:', { start, end, survey, title });
   
   // Fetch all data in parallel
-  const [kpis, responses, allResponses] = await Promise.all([
+  const [kpis, responses, allResponses, themeTitles] = await Promise.all([
     getThemeKpis(theme, { start, end, survey, title }),
     getThemeResponses(theme, { start, end, survey, title }),
-    getAllThemeResponses(theme, { start, end, survey, title })
+    getAllThemeResponses(theme, { start, end, survey, title }),
+    getThemeTitles(theme, { start, end, survey })
   ]);
   
   // Extract key insights from all responses
@@ -282,6 +284,16 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
 
         {/* Filters */}
         <FiltersBar surveys={surveys} titles={titles} />
+
+        {/* Executive Summary */}
+        <ThemeSummary 
+          theme={theme}
+          kpis={kpis}
+          titles={themeTitles}
+          keyInsights={keyInsights}
+          promoterResponses={promoterResponses}
+          detractorResponses={detractorResponses}
+        />
 
         {/* Theme Performance Overview */}
         <div className="space-y-4">
