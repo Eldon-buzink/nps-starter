@@ -73,9 +73,28 @@ export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscover
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Analyseert {responses.length} reacties...</span>
+          <div className="flex flex-col items-center justify-center py-12">
+            {/* Modern animated dots */}
+            <div className="flex space-x-2 mb-6">
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+            </div>
+            
+            {/* Progress indicator */}
+            <div className="w-full max-w-xs bg-gray-200 rounded-full h-2 mb-4">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full animate-pulse"></div>
+            </div>
+            
+            {/* Loading text with typing effect */}
+            <div className="text-center">
+              <p className="text-lg font-medium text-gray-800 mb-2">
+                Analyseert {responses.length} reacties...
+              </p>
+              <p className="text-sm text-gray-500 animate-pulse">
+                AI ontdekt patronen en sub-thema's
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
