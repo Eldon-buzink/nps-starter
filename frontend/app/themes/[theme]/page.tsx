@@ -194,7 +194,7 @@ async function getThemeResponses(theme: string, params: {start?:string,end?:stri
       .gte('nps_response.creation_date', params.start || '2024-01-01')
       .lte('nps_response.creation_date', params.end || '2025-12-31')
       .not('nps_response.nps_explanation', 'is', null)
-      .limit(10);
+      .limit(5);
     
     if (params.survey) {
       query = query.eq('nps_response.survey_name', params.survey);
@@ -291,6 +291,7 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
           kpis={kpis}
           titles={themeTitles}
           keyInsights={keyInsights}
+          responses={allResponses}
         />
 
         {/* Theme Performance Overview */}
