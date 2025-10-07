@@ -291,8 +291,6 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
           kpis={kpis}
           titles={themeTitles}
           keyInsights={keyInsights}
-          promoterResponses={promoterResponses}
-          detractorResponses={detractorResponses}
         />
 
         {/* Theme Performance Overview */}

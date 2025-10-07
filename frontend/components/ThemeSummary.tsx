@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, TrendingUp, TrendingDown, Target, Lightbulb, Users, MessageSquare } from "lucide-react";
+import { AlertCircle, Target, Lightbulb, Users } from "lucide-react";
 
 interface ThemeSummaryProps {
   theme: string;
@@ -25,25 +25,13 @@ interface ThemeSummaryProps {
     word: string;
     count: number;
   }>;
-  promoterResponses: Array<{
-    nps_score: number;
-    nps_explanation: string;
-    title_text: string;
-  }>;
-  detractorResponses: Array<{
-    nps_score: number;
-    nps_explanation: string;
-    title_text: string;
-  }>;
 }
 
 export default function ThemeSummary({ 
   theme, 
   kpis, 
   titles, 
-  keyInsights, 
-  promoterResponses, 
-  detractorResponses 
+  keyInsights
 }: ThemeSummaryProps) {
   
   // Calculate impact metrics
@@ -77,10 +65,10 @@ export default function ThemeSummary({
     if (detractorPercentage > 50) {
       insights.push({
         type: 'impact',
-        title: 'High Detractor Impact',
-        description: `${detractorPercentage.toFixed(1)}% of responses are detractors`,
-        action: 'Focus on reducing negative sentiment through targeted improvements',
-        reasoning: 'High detractor percentage indicates systemic issues that need immediate attention'
+        title: 'Hoge Detractor Impact',
+        description: `${detractorPercentage.toFixed(1)}% van alle reacties zijn detractors`,
+        action: 'Stel een klantherstelprogramma op voor de ${kpis.detractors} ontevreden klanten',
+        reasoning: 'Hoge detractor-percentage wijst op systemische problemen die directe aandacht vereisen'
       });
     }
     
@@ -89,22 +77,37 @@ export default function ThemeSummary({
       const topTitle = topAffectedTitles[0];
       insights.push({
         type: 'scope',
-        title: 'Most Affected Title',
-        description: `${topTitle.title} has ${topTitle.total} mentions with ${topTitle.nps.toFixed(1)} NPS`,
-        action: `Prioritize improvements for ${topTitle.title} - highest volume of feedback`,
-        reasoning: 'Addressing the most affected title will have the biggest impact on overall theme performance'
+        title: 'Meest Getroffen Titel',
+        description: `${topTitle.title} heeft ${topTitle.total} vermeldingen met ${topTitle.nps.toFixed(1)} NPS`,
+        action: `Plan een klantentevredenheidsonderzoek specifiek voor ${topTitle.title} abonnees`,
+        reasoning: 'Het aanpakken van de meest getroffen titel heeft de grootste impact op de algehele thema-prestaties'
       });
     }
     
     // Content-specific insights based on key words
     if (keyInsights.length > 0) {
       const topWords = keyInsights.slice(0, 3).map(k => k.word).join(', ');
+      
+      // Generate specific content actions based on the theme
+      let specificAction = '';
+      if (theme.includes('content') || theme.includes('kwaliteit')) {
+        specificAction = `Verhoog de kwaliteit van artikelen over: ${topWords}. Plan een redactie-overleg om deze onderwerpen te bespreken`;
+      } else if (theme.includes('delivery') || theme.includes('bezorging')) {
+        specificAction = `Onderzoek bezorgproblemen rondom: ${topWords}. Contacteer bezorgpartners voor deze specifieke gebieden`;
+      } else if (theme.includes('pricing') || theme.includes('prijs')) {
+        specificAction = `Herzie prijsstrategie voor: ${topWords}. Analyseer concurrentieprijzen en overweeg kortingen`;
+      } else if (theme.includes('support') || theme.includes('klantenservice')) {
+        specificAction = `Verbeter klantenservice voor problemen met: ${topWords}. Train medewerkers op deze specifieke issues`;
+      } else {
+        specificAction = `Focus verbeteracties op: ${topWords}. Stel een werkgroep samen voor deze onderwerpen`;
+      }
+      
       insights.push({
         type: 'content',
-        title: 'Key Topics',
-        description: `Most mentioned: ${topWords}`,
-        action: `Focus content strategy around: ${topWords}`,
-        reasoning: 'These are the specific areas customers mention most frequently'
+        title: 'Belangrijkste Onderwerpen',
+        description: `Meest genoemd: ${topWords}`,
+        action: specificAction,
+        reasoning: 'Dit zijn de specifieke gebieden waar klanten het meest over praten'
       });
     }
     
@@ -112,10 +115,10 @@ export default function ThemeSummary({
     if (kpis.current_nps < 0) {
       insights.push({
         type: 'nps',
-        title: 'Negative NPS',
-        description: `Current NPS: ${kpis.current_nps.toFixed(1)} (${kpis.detractors} detractors vs ${kpis.promoters} promoters)`,
-        action: 'Implement customer recovery program and address root causes',
-        reasoning: 'Negative NPS means more customers are actively dissatisfied than satisfied'
+        title: 'Negatieve NPS',
+        description: `Huidige NPS: ${kpis.current_nps.toFixed(1)} (${kpis.detractors} detractors vs ${kpis.promoters} promoters)`,
+        action: `Stuur een herstel-e-mail naar de ${kpis.detractors} detractors met een persoonlijk bericht van de hoofdredacteur`,
+        reasoning: 'Negatieve NPS betekent dat meer klanten actief ontevreden zijn dan tevreden'
       });
     }
     
@@ -215,53 +218,6 @@ export default function ThemeSummary({
           </div>
         </div>
         
-        {/* Sample Customer Feedback */}
-        {(promoterResponses.length > 0 || detractorResponses.length > 0) && (
-          <div>
-            <h4 className="font-semibold mb-3 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Sample Customer Feedback
-            </h4>
-            
-            {promoterResponses.length > 0 && (
-              <div className="mb-4">
-                <h5 className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  What Promoters Say ({promoterResponses.length} examples)
-                </h5>
-                <div className="space-y-2">
-                  {promoterResponses.slice(0, 2).map((response, index) => (
-                    <div key={index} className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
-                      <p className="text-sm text-green-800">{response.nps_explanation}</p>
-                      <p className="text-xs text-green-600 mt-1">
-                        {response.title_text} • Score: {response.nps_score}/10
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {detractorResponses.length > 0 && (
-              <div>
-                <h5 className="text-sm font-medium text-red-700 mb-2 flex items-center gap-1">
-                  <TrendingDown className="h-3 w-3" />
-                  What Detractors Say ({detractorResponses.length} examples)
-                </h5>
-                <div className="space-y-2">
-                  {detractorResponses.slice(0, 2).map((response, index) => (
-                    <div key={index} className="p-3 bg-red-50 border-l-4 border-red-400 rounded">
-                      <p className="text-sm text-red-800">{response.nps_explanation}</p>
-                      <p className="text-xs text-red-600 mt-1">
-                        {response.title_text} • Score: {response.nps_score}/10
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
         
       </CardContent>
     </Card>
