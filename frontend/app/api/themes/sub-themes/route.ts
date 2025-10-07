@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
     // Prepare sample responses for AI analysis
     const sampleResponses = responses.slice(0, 20).map((r: any) => r.nps_explanation).join('\n\n');
 
-    // Create prompt for sub-theme discovery
-    const prompt = `Analyze these customer feedback responses about "${theme}" and identify specific sub-themes or patterns in what customers are complaining about or praising.
+        // Create theme-specific prompt for more accurate sub-themes
+        const getThemeSpecificPrompt = (theme: string, responses: string) => {
+          const basePrompt = `Analyze these customer feedback responses about "${theme}" and identify specific sub-themes or patterns. Focus ONLY on aspects that directly relate to "${theme}" - ignore unrelated topics like delivery, pricing, or customer service.
 
 Responses to analyze:
-${sampleResponses}
+${responses}
 
 Please identify 3-5 specific sub-themes within "${theme}" and provide:
 1. Sub-theme name (in Dutch)
@@ -45,6 +46,33 @@ IMPORTANT: Return ONLY valid JSON array, no markdown formatting or code blocks. 
     "recommendation": "specific actionable recommendation in Dutch"
   }
 ]`;
+
+          // Add theme-specific guidance
+          if (theme.includes('content') || theme.includes('kwaliteit')) {
+            return basePrompt + `
+
+SPECIFIC GUIDANCE FOR CONTENT QUALITY:
+- Focus on: article quality, journalism, writing style, topic variety, news coverage, editorial decisions
+- IGNORE: delivery issues, pricing complaints, customer service, app functionality
+- Look for patterns about: actualiteit (news relevance), diepgang (depth), diversiteit (variety), betrouwbaarheid (reliability)`;
+          } else if (theme.includes('delivery') || theme.includes('bezorging')) {
+            return basePrompt + `
+
+SPECIFIC GUIDANCE FOR DELIVERY:
+- Focus on: timing, packaging, delivery method, location issues
+- IGNORE: content quality, pricing, customer service, app issues`;
+          } else if (theme.includes('pricing') || theme.includes('prijs')) {
+            return basePrompt + `
+
+SPECIFIC GUIDANCE FOR PRICING:
+- Focus on: value for money, subscription costs, payment methods, discounts
+- IGNORE: content quality, delivery, customer service, app functionality`;
+          }
+          
+          return basePrompt;
+        };
+
+        const prompt = getThemeSpecificPrompt(theme, sampleResponses);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',

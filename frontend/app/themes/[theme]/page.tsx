@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import ThemeSummary from '@/components/ThemeSummary';
+import SubThemeDiscovery from '@/components/SubThemeDiscovery';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -350,34 +351,14 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
           </div>
         </div>
 
-        {/* Key Insights */}
-        {keyInsights.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-yellow-600" />
-              <h2 className="text-xl font-semibold">Key Insights</h2>
-            </div>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Common Words & Phrases</CardTitle>
-                <CardDescription>
-                  These are the most frequently mentioned words in customer feedback about {theme.replace('_', ' ')}, filtered to show meaningful terms only.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {keyInsights.map((insight, i) => (
-                    <Badge key={i} variant="outline" className="text-sm px-3 py-1">
-                      <span className="font-medium">{insight.word}</span>
-                      <span className="ml-2 text-muted-foreground">({insight.count})</span>
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Key Insights - Now Sub-Theme Analysis */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-600" />
+            <h2 className="text-xl font-semibold">Key Insights</h2>
           </div>
-        )}
+          <SubThemeDiscovery theme={theme} responses={allResponses} />
+        </div>
 
         {/* What Promoters Say vs What Detractors Say */}
         {(promoterResponses.length > 0 || detractorResponses.length > 0) && (
