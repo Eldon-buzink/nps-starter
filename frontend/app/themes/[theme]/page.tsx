@@ -355,9 +355,9 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-yellow-600" />
-            <h2 className="text-xl font-semibold">Key Insights</h2>
+            <h2 className="text-xl font-semibold">Sub-Thema Analyse: content kwaliteit</h2>
           </div>
-          <SubThemeDiscovery theme={theme} responses={allResponses} />
+          <SubThemeDiscovery theme={theme} responses={allResponses} hideHeader={true} />
         </div>
 
         {/* What Promoters Say vs What Detractors Say */}

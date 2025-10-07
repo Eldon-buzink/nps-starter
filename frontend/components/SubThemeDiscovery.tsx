@@ -20,9 +20,10 @@ interface SubThemeDiscoveryProps {
     nps_explanation: string;
     title_text: string;
   }>;
+  hideHeader?: boolean;
 }
 
-export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscoveryProps) {
+export default function SubThemeDiscovery({ theme, responses, hideHeader = false }: SubThemeDiscoveryProps) {
   const [subThemes, setSubThemes] = useState<SubTheme[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +67,14 @@ export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscover
   if (loading) {
     return (
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5" />
-            Sub-Thema Analyse
-          </CardTitle>
-        </CardHeader>
+        {!hideHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5" />
+              Sub-Thema Analyse
+            </CardTitle>
+          </CardHeader>
+        )}
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12">
             {/* Modern animated dots */}
@@ -104,12 +107,14 @@ export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscover
   if (error) {
     return (
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            Sub-Thema Analyse
-          </CardTitle>
-        </CardHeader>
+        {!hideHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Sub-Thema Analyse
+            </CardTitle>
+          </CardHeader>
+        )}
         <CardContent>
           <div className="text-red-600 text-center py-4">
             {error}
@@ -122,12 +127,14 @@ export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscover
   if (subThemes.length === 0) {
     return (
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5" />
-            Sub-Thema Analyse
-          </CardTitle>
-        </CardHeader>
+        {!hideHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5" />
+              Sub-Thema Analyse
+            </CardTitle>
+          </CardHeader>
+        )}
         <CardContent>
           <div className="text-gray-600 text-center py-4">
             Geen sub-thema's gevonden voor {theme}.
@@ -139,12 +146,14 @@ export default function SubThemeDiscovery({ theme, responses }: SubThemeDiscover
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5" />
-          Sub-Thema Analyse: {theme.replace('_', ' ')}
-        </CardTitle>
-      </CardHeader>
+      {!hideHeader && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5" />
+            Sub-Thema Analyse: {theme.replace('_', ' ')}
+          </CardTitle>
+        </CardHeader>
+      )}
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">
           AI-analyse van {responses.length} klantreacties om specifieke sub-thema's te identificeren.
