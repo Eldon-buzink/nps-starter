@@ -35,7 +35,7 @@ Please identify 3-5 specific sub-themes within "${theme}" and provide:
 4. Sample quote that represents this sub-theme
 5. Specific actionable recommendation for this sub-theme
 
-Return as JSON array with this structure:
+IMPORTANT: Return ONLY valid JSON array, no markdown formatting or code blocks. Use this exact structure:
 [
   {
     "subTheme": "sub-theme name in Dutch",
@@ -67,12 +67,21 @@ Return as JSON array with this structure:
       throw new Error('No response from OpenAI');
     }
 
-    // Parse the JSON response
+    // Parse the JSON response (handle markdown code blocks)
     let subThemes;
     try {
-      subThemes = JSON.parse(response);
+      // Remove markdown code blocks if present
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      subThemes = JSON.parse(cleanResponse);
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', response);
+      console.error('Parse error:', parseError);
       throw new Error('Invalid JSON response from OpenAI');
     }
 

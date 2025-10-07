@@ -197,6 +197,34 @@ export default function ThemeSummary({
           </div>
         )}
         
+        {/* Actionable Insights */}
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Actionable Insights
+          </h4>
+          <div className="space-y-3">
+            {actionableInsights.map((insight, index) => (
+              <div key={index} className="p-4 border rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h5 className="font-medium text-blue-900">{insight.title}</h5>
+                    <p className="text-sm text-gray-700 mt-1">{insight.description}</p>
+                    <div className="mt-2 p-2 bg-blue-50 rounded">
+                      <p className="text-sm font-medium text-blue-800">Recommended Action:</p>
+                      <p className="text-sm text-blue-700">{insight.action}</p>
+                    </div>
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500">Why: {insight.reasoning}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Sub-Theme Discovery */}
         <SubThemeDiscovery theme={theme} responses={responses} />
         
