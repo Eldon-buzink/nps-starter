@@ -22,11 +22,59 @@ function getLastFullMonth() {
 // Get themes data from normalized view with enhanced explanations
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
+    console.log('getThemes called with params:', params);
     
     // Use the normalized view that handles synonyms and "Other (cluster)" collapsing
+    // First get the filtered theme assignments to understand which themes are relevant
+    let themeQuery = supabase
+      .from('v_theme_assignments_normalized')
+      .select(`
+        canonical_theme,
+        nps_response!inner(
+          survey_name,
+          title_text,
+          creation_date
+        )
+      `);
+    
+    // Apply filters to the theme assignments
+    if (params.start) {
+      themeQuery = themeQuery.gte('nps_response.creation_date', params.start);
+    }
+    if (params.end) {
+      themeQuery = themeQuery.lte('nps_response.creation_date', params.end);
+    }
+    if (params.survey) {
+      themeQuery = themeQuery.eq('nps_response.survey_name', params.survey);
+    }
+    if (params.title) {
+      themeQuery = themeQuery.eq('nps_response.title_text', params.title);
+    }
+    
+    const { data: filteredAssignments, error: assignmentError } = await themeQuery;
+    
+    if (assignmentError) {
+      console.error('Error fetching filtered theme assignments:', assignmentError);
+      return [];
+    }
+    
+    if (!filteredAssignments || filteredAssignments.length === 0) {
+      console.log('No theme assignments found for the given filters');
+      return [];
+    }
+    
+    // Get unique themes from filtered assignments
+    const themeCounts = new Map<string, number>();
+    filteredAssignments.forEach(assignment => {
+      const theme = assignment.canonical_theme;
+      themeCounts.set(theme, (themeCounts.get(theme) || 0) + 1);
+    });
+    
+    // Now get the theme overview data for these themes
     const { data, error } = await supabase
       .from('v_theme_overview_normalized')
       .select('*')
+      .in('theme', Array.from(themeCounts.keys()))
       .order('mentions', { ascending: false });
     
     
@@ -37,15 +85,18 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
     
     // Transform the data to match the expected format and add enhanced explanations
     const result = await Promise.all(data?.map(async (row) => {
+      // Use filtered theme counts instead of raw mentions from the view
+      const filteredMentions = themeCounts.get(row.theme) || 0;
+      
       // Define the original base themes (the ones that were predefined)
       const baseThemes = ['content_kwaliteit', 'pricing', 'merkvertrouwen', 'overige'];
       const isBaseTheme = baseThemes.includes(row.theme);
       const isOtherCluster = row.theme === 'Other (cluster)';
       
-      // Determine business relevance based on mentions
+      // Determine business relevance based on filtered mentions
       let businessRelevance: 'high' | 'medium' | 'low' = 'medium';
-      if (row.mentions >= 100) businessRelevance = 'high';
-      else if (row.mentions < 10) businessRelevance = 'low';
+      if (filteredMentions >= 100) businessRelevance = 'high';
+      else if (filteredMentions < 10) businessRelevance = 'low';
 
       let explanation = '';
       
@@ -97,8 +148,8 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
 
       return {
         theme: row.theme,
-        count_responses: row.mentions,
-        share_pct: row.mentions > 0 ? Math.round((row.mentions / (data.reduce((sum, r) => sum + r.mentions, 0))) * 100 * 10) / 10 : 0,
+        count_responses: filteredMentions,
+        share_pct: filteredMentions > 0 ? Math.round((filteredMentions / (Array.from(themeCounts.values()).reduce((sum, count) => sum + count, 0))) * 100 * 10) / 10 : 0,
         avg_sentiment: Math.round((row.avg_sentiment || 0) * 100) / 100,
         avg_nps: Math.round((row.avg_nps || 0) * 10) / 10,
         pct_promoters: Math.round((row.pct_promoters || 0) * 100),
@@ -110,7 +161,7 @@ async function getThemes(params: {start?:string,end?:string,survey?:string|null,
         explanation,
         source: isBaseTheme ? 'base' as const : 'ai' as const,
         businessRelevance,
-        frequency: row.mentions / (data.reduce((sum, t) => sum + t.mentions, 0) || 1),
+        frequency: filteredMentions / (Array.from(themeCounts.values()).reduce((sum, count) => sum + count, 0) || 1),
         confidence: isBaseTheme ? 1.0 : 0.8
       };
     }) || []);
