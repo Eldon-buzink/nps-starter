@@ -207,3 +207,4 @@ For support and questions:
 - Review the API documentation at `/docs`
 - Open an issue for bugs or feature requests
 # Deployment trigger Sun Oct  5 14:56:51 CEST 2025
+# Force Vercel redeploy with latest fixes
