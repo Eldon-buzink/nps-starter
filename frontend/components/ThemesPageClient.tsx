@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Lightbulb, Brain, Database, CheckCircle, AlertCircle, Info } from "lucide-react"
 import CollapsibleThemeCategories from '@/components/CollapsibleThemeCategories'
-import { getThemeMapping } from '@/lib/theme-mapping'
 import ThemesLoadingSkeleton from './ThemesLoadingSkeleton'
 import LoadingSpinner from './LoadingSpinner'
 
@@ -132,7 +131,7 @@ export default function ThemesPageClient({
             </div>
 
             {/* Collapsible Theme Categories */}
-            <CollapsibleThemeCategories themes={themes} getThemeMapping={getThemeMapping} searchParams={searchParams} />
+            <CollapsibleThemeCategories themes={themes} searchParams={searchParams} />
           </CardContent>
         </Card>
       )}

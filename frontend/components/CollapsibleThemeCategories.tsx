@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Tag, TrendingUp, TrendingDown, Lightbulb, Brain, Database, CheckCircle, AlertCircle, Info, ChevronDown, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { ThemeInfoButton } from "@/components/ThemeInfoButton"
-import { ThemeMapping } from "@/lib/theme-mapping"
 
 interface Theme {
   theme: string
@@ -29,7 +28,6 @@ interface Theme {
 
 interface CollapsibleThemeCategoriesProps {
   themes: Theme[]
-  getThemeMapping: (theme: string) => ThemeMapping
   searchParams?: URLSearchParams
 }
 
@@ -42,10 +40,10 @@ interface CategorySummary {
   themes: Theme[]
 }
 
-export default function CollapsibleThemeCategories({ themes, getThemeMapping, searchParams }: CollapsibleThemeCategoriesProps) {
+export default function CollapsibleThemeCategories({ themes, searchParams }: CollapsibleThemeCategoriesProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
-  // Group themes by main category
+  // Group themes by main category (simplified without theme mapping)
   const groupedThemes = themes.reduce((groups, theme) => {
     // Skip themes with invalid names
     if (!theme || !theme.theme) {
@@ -53,9 +51,24 @@ export default function CollapsibleThemeCategories({ themes, getThemeMapping, se
       return groups;
     }
     
-    const mapping = getThemeMapping(theme.theme);
-    if (!groups[mapping.main]) groups[mapping.main] = [];
-    groups[mapping.main].push(theme);
+    // Simple categorization based on theme name
+    let category = 'Other';
+    const themeName = theme.theme.toLowerCase();
+    
+    if (themeName.includes('content') || themeName.includes('kwaliteit') || themeName.includes('journalistiek')) {
+      category = 'Content';
+    } else if (themeName.includes('service') || themeName.includes('klant') || themeName.includes('support')) {
+      category = 'Customer Service';
+    } else if (themeName.includes('delivery') || themeName.includes('bezorging') || themeName.includes('levering')) {
+      category = 'Delivery';
+    } else if (themeName.includes('pricing') || themeName.includes('prijs') || themeName.includes('kosten')) {
+      category = 'Price';
+    } else if (themeName.includes('ux') || themeName.includes('gebruik') || themeName.includes('interface')) {
+      category = 'User Experience';
+    }
+    
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(theme);
     return groups;
   }, {} as Record<string, Theme[]>);
 
