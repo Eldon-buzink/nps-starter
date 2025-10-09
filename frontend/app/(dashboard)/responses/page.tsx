@@ -305,7 +305,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                           <span className="text-sm text-muted-foreground">{response.survey_name}</span>
                         </div>
                         
-                        {response.nps_ai_enrichment?.themes && (
+                        {response.nps_ai_enrichment?.themes && response.nps_ai_enrichment.themes.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {response.nps_ai_enrichment.themes.map((theme: string, i: number) => (
                               <Badge key={i} variant="outline" className="text-xs">
@@ -319,13 +319,13 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                           {response.nps_explanation || 'Geen opmerking'}
                         </p>
                         
-                        {response.nps_ai_enrichment?.sentiment_score !== null && (
+                        {response.nps_ai_enrichment?.sentiment_score !== null && response.nps_ai_enrichment?.sentiment_score !== undefined && (
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-muted-foreground">Sentiment:</span>
-                            <span className={`text-xs font-medium ${getSentimentColor(response.nps_ai_enrichment.sentiment_score)}`}>
-                              {response.nps_ai_enrichment.sentiment_score?.toFixed(2)}
+                            <span className={`text-xs font-medium ${getSentimentColor(response.nps_ai_enrichment?.sentiment_score)}`}>
+                              {response.nps_ai_enrichment?.sentiment_score?.toFixed(2)}
                             </span>
-                            {response.nps_ai_enrichment.sentiment_label && (
+                            {response.nps_ai_enrichment?.sentiment_label && (
                               <Badge variant="outline" className="text-xs">
                                 {response.nps_ai_enrichment.sentiment_label}
                               </Badge>
