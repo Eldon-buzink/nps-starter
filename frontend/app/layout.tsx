@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/Footer'
 import PasswordProtection from '@/components/PasswordProtection'
+import LoadingWrapper from '@/components/LoadingWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,13 +30,15 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PasswordProtection>
-            <div className="min-h-screen flex flex-col">
-              <Navigation />
-              <main className="flex-1 bg-background">
-                {children}
-              </main>
-              <Footer />
-            </div>
+            <LoadingWrapper>
+              <div className="min-h-screen flex flex-col">
+                <Navigation />
+                <main className="flex-1 bg-background">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+            </LoadingWrapper>
           </PasswordProtection>
           <Toaster />
         </ThemeProvider>

@@ -460,7 +460,7 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
                 <Link 
                   key={i}
                   href={`/themes/${encodeURIComponent(theme.theme)}${title ? `?title=${encodeURIComponent(title)}` : ''}`}
-                  className="block border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className="block border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -504,7 +504,9 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
                       </Badge>
                     </div>
                     
-                    <ThemeInfoButton explanation={theme.explanation} />
+                    <div onClick={(e) => e.preventDefault()} className="relative z-10">
+                      <ThemeInfoButton explanation={theme.explanation} />
+                    </div>
                   </div>
 
                   {/* Detailed Metrics */}
@@ -533,11 +535,16 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
                   </div>
 
                   {/* Theme Explanation */}
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    {theme.source === 'ai' 
-                      ? '🤖 This theme was discovered by AI analysis of customer feedback'
-                      : '📋 This is a predefined business category'
-                    }
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      {theme.source === 'ai' 
+                        ? '🤖 This theme was discovered by AI analysis of customer feedback'
+                        : '📋 This is a predefined business category'
+                      }
+                    </div>
+                    <div className="text-sm text-blue-600 group-hover:text-blue-800 transition-colors">
+                      View theme details →
+                    </div>
                   </div>
                 </Link>
               ))}
