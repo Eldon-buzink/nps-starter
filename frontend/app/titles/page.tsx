@@ -504,7 +504,7 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
                       </Badge>
                     </div>
                     
-                    <div onClick={(e) => e.preventDefault()} className="relative z-10">
+                    <div className="relative z-10" style={{ pointerEvents: 'auto' }}>
                       <ThemeInfoButton explanation={theme.explanation} />
                     </div>
                   </div>
