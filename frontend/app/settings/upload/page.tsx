@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -7,12 +7,46 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, Brain, AlertCircle, CheckCircle, XCircle, Database, FileText } from "lucide-react";
 import SurveyHealth from "@/app/(dashboard)/settings/survey-health";
 
+interface EnrichmentStats {
+  totalResponses: number;
+  responsesWithComments: number;
+  enrichedResponses: number;
+  enrichmentPercentage: number;
+  lastRunInfo?: {
+    lastRun: string;
+    processedCount: number;
+  };
+}
+
 export default function SettingsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichmentStats, setEnrichmentStats] = useState<EnrichmentStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Fetch enrichment stats on component mount
+  useEffect(() => {
+    const fetchEnrichmentStats = async () => {
+      try {
+        const response = await fetch('/api/enrichment-stats');
+        if (response.ok) {
+          const data = await response.json();
+          setEnrichmentStats(data);
+        } else {
+          console.error('Failed to fetch enrichment stats');
+        }
+      } catch (error) {
+        console.error('Error fetching enrichment stats:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchEnrichmentStats();
+  }, []);
 
   async function onUpload() {
     if (!file) return;
@@ -111,28 +145,40 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold">25,128</div>
-              <div className="text-sm text-muted-foreground">Total Responses</div>
+          {isLoadingStats ? (
+            <div className="text-center py-4">
+              <div className="text-sm text-muted-foreground">Loading enrichment data...</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">18,456</div>
-              <div className="text-sm text-muted-foreground">With Comments</div>
+          ) : enrichmentStats ? (
+            <>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{enrichmentStats.totalResponses.toLocaleString()}</div>
+                  <div className="text-sm text-muted-foreground">Total Responses</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{enrichmentStats.responsesWithComments.toLocaleString()}</div>
+                  <div className="text-sm text-muted-foreground">With Comments</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{enrichmentStats.enrichmentPercentage}%</div>
+                  <div className="text-sm text-muted-foreground">Enriched</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Enrichment Coverage</span>
+                  <span>{enrichmentStats.enrichmentPercentage}%</span>
+                </div>
+                <Progress value={enrichmentStats.enrichmentPercentage} className="w-full" />
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4">
+              <div className="text-sm text-red-600">Failed to load enrichment data</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">73%</div>
-              <div className="text-sm text-muted-foreground">Enriched</div>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Enrichment Coverage</span>
-              <span>73%</span>
-            </div>
-            <Progress value={73} className="w-full" />
-          </div>
+          )}
           
           <Button 
             className="w-full" 
@@ -162,7 +208,13 @@ export default function SettingsPage() {
           </Button>
           
           <div className="text-sm text-muted-foreground">
-            Last run: 2 uur geleden • 1,234 responses processed
+            {enrichmentStats?.lastRunInfo ? (
+              <>
+                Last run: {new Date(enrichmentStats.lastRunInfo.lastRun).toLocaleString('nl-NL')} • {enrichmentStats.lastRunInfo.processedCount.toLocaleString()} responses processed
+              </>
+            ) : (
+              'No enrichment runs recorded'
+            )}
           </div>
         </CardContent>
       </Card>
