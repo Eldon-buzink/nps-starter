@@ -55,10 +55,10 @@ async function getResponses(params: {
       .order('created_at', { ascending: false });
 
     // Apply filters
-    if (params.survey) {
+    if (params.survey && params.survey !== 'all') {
       query = query.eq('survey_name', params.survey);
     }
-    if (params.title) {
+    if (params.title && params.title !== 'all') {
       query = query.eq('title_text', params.title);
     }
     if (params.nps_bucket && params.nps_bucket !== 'all') {
@@ -214,12 +214,10 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action="/responses" method="GET" className="grid gap-4 md:grid-cols-4">
+            <form action="/responses" method="GET" className="grid gap-4 md:grid-cols-6">
               {/* Hidden fields to preserve existing filters */}
               <input type="hidden" name="start" value={start} />
               <input type="hidden" name="end" value={end} />
-              <input type="hidden" name="survey" value={survey || ''} />
-              <input type="hidden" name="title" value={title || ''} />
               
               <div>
                 <label className="block text-sm mb-1">Zoek in opmerkingen</label>
@@ -233,6 +231,37 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                   />
                 </div>
               </div>
+              
+              <div>
+                <label className="block text-sm mb-1">Titel</label>
+                <Select name="title" defaultValue={title || 'all'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Alle titels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle titels</SelectItem>
+                    {titles.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm mb-1">Survey Type</label>
+                <Select name="survey" defaultValue={survey || 'all'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Alle surveys" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle surveys</SelectItem>
+                    {surveys.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div>
                 <label className="block text-sm mb-1">NPS Categorie</label>
                 <Select name="nps_bucket" defaultValue={nps_bucket || 'all'}>
@@ -247,6 +276,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                   </SelectContent>
                 </Select>
               </div>
+              
               <div>
                 <label className="block text-sm mb-1">Thema</label>
                 <Select name="theme" defaultValue={theme || 'all'}>
@@ -261,6 +291,7 @@ export default async function ResponsesPage({ searchParams }: ResponsesPageProps
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="flex items-end">
                 <Button type="submit" className="w-full">Filters Toepassen</Button>
               </div>
