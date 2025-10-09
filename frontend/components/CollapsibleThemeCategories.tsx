@@ -51,20 +51,33 @@ export default function CollapsibleThemeCategories({ themes, searchParams }: Col
       return groups;
     }
     
-    // Simple categorization based on theme name
+    // Enhanced categorization based on theme name
     let category = 'Other';
     const themeName = theme.theme.toLowerCase();
     
-    if (themeName.includes('content') || themeName.includes('kwaliteit') || themeName.includes('journalistiek')) {
+    if (themeName.includes('content') || themeName.includes('kwaliteit') || themeName.includes('journalistiek') || 
+        themeName.includes('artikel') || themeName.includes('nieuws') || themeName.includes('verhaal') ||
+        themeName.includes('column') || themeName.includes('opinie') || themeName.includes('verslag')) {
       category = 'Content';
-    } else if (themeName.includes('service') || themeName.includes('klant') || themeName.includes('support')) {
+    } else if (themeName.includes('service') || themeName.includes('klant') || themeName.includes('support') ||
+               themeName.includes('klachten') || themeName.includes('hulp') || themeName.includes('contact')) {
       category = 'Customer Service';
-    } else if (themeName.includes('delivery') || themeName.includes('bezorging') || themeName.includes('levering')) {
+    } else if (themeName.includes('delivery') || themeName.includes('bezorging') || themeName.includes('levering') ||
+               themeName.includes('post') || themeName.includes('aflevering') || themeName.includes('bezorgen')) {
       category = 'Delivery';
-    } else if (themeName.includes('pricing') || themeName.includes('prijs') || themeName.includes('kosten')) {
+    } else if (themeName.includes('pricing') || themeName.includes('prijs') || themeName.includes('kosten') ||
+               themeName.includes('abonnement') || themeName.includes('tarief') || themeName.includes('betaling')) {
       category = 'Price';
-    } else if (themeName.includes('ux') || themeName.includes('gebruik') || themeName.includes('interface')) {
+    } else if (themeName.includes('ux') || themeName.includes('gebruik') || themeName.includes('interface') ||
+               themeName.includes('app') || themeName.includes('website') || themeName.includes('navigatie') ||
+               themeName.includes('toegankelijkheid') || themeName.includes('gebruiksgemak') || themeName.includes('vormgeving')) {
       category = 'User Experience';
+    } else if (themeName.includes('communicatie') || themeName.includes('email') || themeName.includes('nieuwsbrief') ||
+               themeName.includes('bericht') || themeName.includes('notificatie')) {
+      category = 'Communication';
+    } else if (themeName.includes('merk') || themeName.includes('brand') || themeName.includes('vertrouwen') ||
+               themeName.includes('reputatie') || themeName.includes('identiteit')) {
+      category = 'Brand & Trust';
     }
     
     if (!groups[category]) groups[category] = [];
@@ -77,8 +90,10 @@ export default function CollapsibleThemeCategories({ themes, searchParams }: Col
     'Content',
     'Customer Service', 
     'Delivery',
+    'Communication',
     'Price',
     'User Experience',
+    'Brand & Trust',
     'Other'
   ];
 
@@ -133,7 +148,7 @@ export default function CollapsibleThemeCategories({ themes, searchParams }: Col
 
         const summary = getCategorySummary(category, categoryThemes);
         const isExpanded = expandedCategories.has(category);
-        const themesToShow = isExpanded ? categoryThemes : categoryThemes.slice(0, 4);
+        const themesToShow = isExpanded ? categoryThemes : categoryThemes.slice(0, 8);
 
         return (
           <Card key={category} className={`${getCategoryColor(category)} border-2`}>
@@ -268,7 +283,7 @@ export default function CollapsibleThemeCategories({ themes, searchParams }: Col
                   </Link>
                 ))}
 
-                {categoryThemes.length > 4 && (
+                {categoryThemes.length > 8 && (
                   <div className="flex justify-center pt-2">
                     <Button 
                       variant="outline" 
