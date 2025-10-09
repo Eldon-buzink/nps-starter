@@ -30,6 +30,7 @@ interface ThemeSummaryProps {
     nps_explanation: string;
     title_text: string;
   }>;
+  selectedTitle?: string | null;
 }
 
 export default function ThemeSummary({ 
@@ -37,7 +38,8 @@ export default function ThemeSummary({
   kpis, 
   titles, 
   keyInsights,
-  responses
+  responses,
+  selectedTitle
 }: ThemeSummaryProps) {
   
   // Calculate impact metrics
@@ -81,13 +83,26 @@ export default function ThemeSummary({
     // Title-specific insights
     if (topAffectedTitles.length > 0) {
       const topTitle = topAffectedTitles[0];
-      insights.push({
-        type: 'scope',
-        title: 'Meest Getroffen Titel',
-        description: `${topTitle.title} heeft ${topTitle.total} vermeldingen met ${topTitle.nps.toFixed(1)} NPS`,
-        action: `Plan een klantentevredenheidsonderzoek specifiek voor ${topTitle.title} abonnees`,
-        reasoning: 'Het aanpakken van de meest getroffen titel heeft de grootste impact op de algehele thema-prestaties'
-      });
+      
+      // If a specific title is selected, show contextual insights
+      if (selectedTitle) {
+        insights.push({
+          type: 'scope',
+          title: 'Focus op Geselecteerde Titel',
+          description: `${selectedTitle} heeft ${kpis.total_responses} vermeldingen van dit thema met ${kpis.current_nps.toFixed(1)} NPS`,
+          action: `Stel een specifiek verbeterplan op voor ${selectedTitle} gericht op dit thema`,
+          reasoning: 'Door te focussen op de geselecteerde titel kun je gerichte verbeteracties ondernemen'
+        });
+      } else {
+        // Show global most affected title insight
+        insights.push({
+          type: 'scope',
+          title: 'Meest Getroffen Titel',
+          description: `${topTitle.title} heeft ${topTitle.total} vermeldingen met ${topTitle.nps.toFixed(1)} NPS`,
+          action: `Plan een klantentevredenheidsonderzoek specifiek voor ${topTitle.title} abonnees`,
+          reasoning: 'Het aanpakken van de meest getroffen titel heeft de grootste impact op de algehele thema-prestaties'
+        });
+      }
     }
     
     // Content-specific insights based on key words

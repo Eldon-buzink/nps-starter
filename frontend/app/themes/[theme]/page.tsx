@@ -293,6 +293,7 @@ export default async function ThemePage({ params, searchParams }: ThemePageProps
           titles={themeTitles}
           keyInsights={keyInsights}
           responses={allResponses}
+          selectedTitle={title}
         />
 
         {/* Theme Performance Overview */}
