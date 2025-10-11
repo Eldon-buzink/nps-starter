@@ -40,9 +40,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch enriched responses' }, { status: 500 });
     }
 
-    // Calculate percentages
-    const enrichmentPercentage = responsesWithComments > 0 
-      ? Math.round((enrichedResponses / responsesWithComments) * 100)
+    // Calculate percentages (handle null values)
+    const enrichmentPercentage = (responsesWithComments ?? 0) > 0 
+      ? Math.round(((enrichedResponses ?? 0) / (responsesWithComments ?? 0)) * 100)
       : 0;
 
     // Get last enrichment run info (approximate)
@@ -56,7 +56,7 @@ export async function GET() {
       ? {
           lastRun: lastEnrichment[0].created_at,
           // Approximate processed count (this is rough)
-          processedCount: Math.min(enrichedResponses, 1000)
+          processedCount: Math.min(enrichedResponses ?? 0, 1000)
         }
       : null;
 
