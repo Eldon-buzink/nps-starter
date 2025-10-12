@@ -6,6 +6,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Mark this route as dynamic to prevent static generation errors
+export const dynamic = 'force-dynamic'
+
 // Get themes data from normalized view with enhanced explanations
 async function getThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
