@@ -51,14 +51,16 @@ export default function SubThemeDiscovery({ theme, responses, hideHeader = false
       });
 
       if (!response.ok) {
-        throw new Error('Failed to discover sub-themes');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API Error:', response.status, errorData);
+        throw new Error(`API Error: ${response.status} - ${errorData.error || 'Unknown error'}`);
       }
 
       const data = await response.json();
       setSubThemes(data.subThemes || []);
     } catch (err) {
       console.error('Error discovering sub-themes:', err);
-      setError('Kon sub-thema\'s niet laden. Probeer het later opnieuw.');
+      setError(`Kon sub-thema's niet laden: ${err instanceof Error ? err.message : 'Onbekende fout'}`);
     } finally {
       setLoading(false);
     }
