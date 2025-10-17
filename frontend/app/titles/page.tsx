@@ -35,7 +35,12 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
       return [];
     }
     
-    if (!data || data.length === 0) return [];
+    if (!data || data.length === 0) {
+      console.log('No trends data found for', title, 'in date range', params.start, 'to', params.end);
+      return [];
+    }
+    
+    console.log(`Found ${data.length} responses for trends for ${title}`);
     
     // Group by month and calculate monthly averages
     const monthlyData = new Map<string, { scores: number[], responses: number }>();

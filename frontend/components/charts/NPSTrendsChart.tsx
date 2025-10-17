@@ -56,7 +56,8 @@ export default function NPSTrendsChart({ data, title, subtitle, className = "" }
   if (!data || data.length === 0) {
     return (
       <div className={`p-8 text-center text-gray-500 ${className}`}>
-        <p>No trend data available</p>
+        <p className="text-sm">No NPS trend data available for the selected period.</p>
+        <p className="text-xs mt-1">Try adjusting the date range or check if data exists for this title.</p>
       </div>
     );
   }
