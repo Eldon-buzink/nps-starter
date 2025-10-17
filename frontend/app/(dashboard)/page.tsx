@@ -336,7 +336,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {movers.filter((m: any) => m.delta > 0).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/titles/${encodeURIComponent(m.title_text)}`}
+                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2024-01-01&end=2025-12-31`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
@@ -369,7 +369,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {movers.filter((m: any) => m.delta < 0).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/titles/${encodeURIComponent(m.title_text)}`}
+                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2024-01-01&end=2025-12-31`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>

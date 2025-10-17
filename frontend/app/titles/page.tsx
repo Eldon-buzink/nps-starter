@@ -527,8 +527,8 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
             <CardContent>
               <NPSTrendsChart 
                 data={trends} 
-                title={`${title} NPS Trends`}
-                subtitle="Monthly average NPS scores and response counts"
+                title=""
+                subtitle=""
               />
             </CardContent>
           </Card>

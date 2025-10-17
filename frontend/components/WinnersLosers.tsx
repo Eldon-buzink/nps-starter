@@ -62,7 +62,7 @@ export default function WinnersLosers({ data, minResponses }: WinnersLosersProps
               {winners.map((item, index) => (
                 <Link
                   key={`${item.title}-${index}`}
-                  href={`/titles/${encodeURIComponent(item.title)}`}
+                  href={`/titles?title=${encodeURIComponent(item.title)}&start=2024-01-01&end=2025-12-31`}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors block"
                 >
                   <div className="flex items-center space-x-3">
@@ -110,7 +110,7 @@ export default function WinnersLosers({ data, minResponses }: WinnersLosersProps
               {losers.map((item, index) => (
                 <Link
                   key={`${item.title}-${index}`}
-                  href={`/titles/${encodeURIComponent(item.title)}`}
+                  href={`/titles?title=${encodeURIComponent(item.title)}&start=2024-01-01&end=2025-12-31`}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors block"
                 >
                   <div className="flex items-center space-x-3">

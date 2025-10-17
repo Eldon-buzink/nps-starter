@@ -73,11 +73,7 @@ export default function NPSTrendsChart({ data, title, subtitle, className = "" }
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">{title}</h3>
-          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
           <span className={`text-sm font-medium ${trendColor}`}>
             {trendIcon} {trend === 'up' ? 'Improving' : trend === 'down' ? 'Declining' : 'Stable'}
@@ -129,22 +125,6 @@ export default function NPSTrendsChart({ data, title, subtitle, className = "" }
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 text-sm">
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="font-semibold text-blue-900">{firstNPS.toFixed(1)}</div>
-          <div className="text-blue-600">Starting NPS</div>
-        </div>
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="font-semibold text-blue-900">{lastNPS.toFixed(1)}</div>
-          <div className="text-blue-600">Current NPS</div>
-        </div>
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="font-semibold text-blue-900">{(lastNPS - firstNPS).toFixed(1)}</div>
-          <div className="text-blue-600">Change</div>
-        </div>
       </div>
     </div>
   );
