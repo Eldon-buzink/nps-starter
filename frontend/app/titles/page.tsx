@@ -19,11 +19,11 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
   try {
     let query = supabase
       .from('nps_response')
-      .select('nps_score, creation_date')
+      .select('nps_score, created_at')
       .eq('title_text', title)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31')
-      .order('creation_date', { ascending: true });
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31')
+      .order('created_at', { ascending: true });
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -41,7 +41,7 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
     const monthlyData = new Map<string, { scores: number[], responses: number }>();
     
     data.forEach((response: any) => {
-      const date = new Date(response.creation_date);
+      const date = new Date(response.created_at);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       
       if (!monthlyData.has(monthKey)) {
@@ -83,11 +83,11 @@ async function getTitleThemes(title: string, params: {start?:string,end?:string,
       .from('v_theme_assignments_normalized')
       .select(`
         canonical_theme,
-        nps_response!inner(title_text, nps_score, creation_date)
+        nps_response!inner(title_text, nps_score, created_at)
       `)
       .eq('nps_response.title_text', title)
-      .gte('nps_response.creation_date', params.start || '2024-01-01')
-      .lte('nps_response.creation_date', params.end || '2025-12-31');
+      .gte('nps_response.created_at', params.start || '2024-01-01')
+      .lte('nps_response.created_at', params.end || '2025-12-31');
 
     if (error) {
       console.error('Error fetching title themes:', error);
@@ -205,26 +205,26 @@ async function getTitleCoverage(title: string, params: {start?:string,end?:strin
       .from('nps_response')
       .select('*', { count: 'exact', head: true })
       .eq('title_text', title)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31');
 
     // Responses with comments
     const { count: withCommentsCount } = await supabase
       .from('nps_response')
       .select('*', { count: 'exact', head: true })
       .eq('title_text', title)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31')
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31')
       .not('nps_explanation', 'is', null)
       .neq('nps_explanation', '');
 
     // Responses with themes (enriched) - check nps_ai_enrichment table
     const { data: enrichedData, error: enrichedError } = await supabase
       .from('nps_ai_enrichment')
-      .select('response_id, nps_response!inner(title_text, creation_date)', { count: 'exact', head: false })
+      .select('response_id, nps_response!inner(title_text, created_at)', { count: 'exact', head: false })
       .eq('nps_response.title_text', title)
-      .gte('nps_response.creation_date', params.start || '2024-01-01')
-      .lte('nps_response.creation_date', params.end || '2025-12-31');
+      .gte('nps_response.created_at', params.start || '2024-01-01')
+      .lte('nps_response.created_at', params.end || '2025-12-31');
 
     // Count unique response IDs (since one response can have multiple themes)
     const uniqueEnrichedIds = new Set(enrichedData?.map((item: any) => item.response_id) || []);
@@ -256,13 +256,13 @@ async function getTitleResponses(title: string, params: {start?:string,end?:stri
   try {
     const { data, error } = await supabase
       .from('nps_response')
-      .select('id, nps_score, nps_explanation, creation_date, title_text')
+      .select('id, nps_score, nps_explanation, created_at, title_text')
       .eq('title_text', title)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31')
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31')
       .not('nps_explanation', 'is', null)
       .neq('nps_explanation', '')
-      .order('creation_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(10);
 
     if (error) {
@@ -282,9 +282,9 @@ async function getTitles(params: {start?:string,end?:string,survey?:string|null,
   try {
     let query = supabase
       .from('nps_response')
-      .select('title_text, nps_score, creation_date')
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .select('title_text, nps_score, created_at')
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -667,7 +667,7 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
                           {response.nps_score}/10
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(response.creation_date).toLocaleDateString('nl-NL')}
+                          {new Date(response.created_at).toLocaleDateString('nl-NL')}
                         </span>
                       </div>
                     </div>
