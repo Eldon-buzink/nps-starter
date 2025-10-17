@@ -7,11 +7,73 @@ import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle, Ar
 import { ThemeInfoButton } from "@/components/ThemeInfoButton";
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import NPSTrendsChart from '@/components/charts/NPSTrendsChart';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Get NPS trends over time for this title
+async function getTitleTrends(title: string, params: {start?:string,end?:string,survey?:string|null}) {
+  try {
+    let query = supabase
+      .from('nps_response')
+      .select('nps_score, creation_date')
+      .eq('title_text', title)
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31')
+      .order('creation_date', { ascending: true });
+    
+    if (params.survey) {
+      query = query.eq('survey_name', params.survey);
+    }
+    
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching title trends:', error);
+      return [];
+    }
+    
+    if (!data || data.length === 0) return [];
+    
+    // Group by month and calculate monthly averages
+    const monthlyData = new Map<string, { scores: number[], responses: number }>();
+    
+    data.forEach((response: any) => {
+      const date = new Date(response.creation_date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, { scores: [], responses: 0 });
+      }
+      
+      const monthData = monthlyData.get(monthKey)!;
+      monthData.scores.push(response.nps_score);
+      monthData.responses += 1;
+    });
+    
+    // Convert to array and calculate NPS metrics
+    return Array.from(monthlyData.entries()).map(([period, data]) => {
+      const avgNPS = data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length;
+      const promoters = data.scores.filter(score => score >= 9).length;
+      const passives = data.scores.filter(score => score >= 7 && score <= 8).length;
+      const detractors = data.scores.filter(score => score <= 6).length;
+      
+      return {
+        period,
+        nps_score: avgNPS,
+        responses: data.responses,
+        promoters,
+        passives,
+        detractors
+      };
+    }).sort((a, b) => a.period.localeCompare(b.period));
+  } catch (error) {
+    console.error('Error in getTitleTrends:', error);
+    return [];
+  }
+}
 
 // Get themes for a specific title
 async function getTitleThemes(title: string, params: {start?:string,end?:string,survey?:string|null}) {
@@ -304,6 +366,7 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
   const themes = title ? await getTitleThemes(title, { start, end, survey }) : [];
   const responses = title ? await getTitleResponses(title, { start, end, survey }) : [];
   const coverage = title ? await getTitleCoverage(title, { start, end, survey }) : null;
+  const trends = title ? await getTitleTrends(title, { start, end, survey }) : [];
   
   console.log('TitlesPage: Results:', {
     allTitlesCount: allTitles?.length || 0,
@@ -449,6 +512,27 @@ export default async function TitlesPage({ searchParams }: TitlesPageProps) {
           )}
         </div>
 
+        {/* NPS Trends Over Time */}
+        {title && trends.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                NPS Trends Over Time
+              </CardTitle>
+              <CardDescription>
+                Monthly NPS score trends for {title} showing performance evolution
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NPSTrendsChart 
+                data={trends} 
+                title={`${title} NPS Trends`}
+                subtitle="Monthly average NPS scores and response counts"
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Themes Section */}
         <div className="space-y-4">
