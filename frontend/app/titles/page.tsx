@@ -74,6 +74,9 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
         detractors
       };
     }).sort((a, b) => a.period.localeCompare(b.period));
+    
+    console.log('Processed trends data:', result);
+    return result;
   } catch (error) {
     console.error('Error in getTitleTrends:', error);
     return [];
