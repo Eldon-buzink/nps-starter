@@ -6,7 +6,7 @@ select 'Current theme distribution:' as info;
 select 
   theme, 
   mentions,
-  round((mentions::float / sum(mentions) over()) * 100, 1) as percentage
+  round((mentions::numeric / sum(mentions) over()) * 100, 1) as percentage
 from v_theme_overview_normalized
 order by mentions desc
 limit 10;
@@ -116,7 +116,7 @@ select 'New theme distribution after fix:' as info;
 select 
   theme, 
   mentions,
-  round((mentions::float / sum(mentions) over()) * 100, 1) as percentage
+  round((mentions::numeric / sum(mentions) over()) * 100, 1) as percentage
 from v_theme_overview_normalized
 order by mentions desc
 limit 15;
@@ -126,6 +126,6 @@ select 'Other (cluster) analysis:' as info;
 select 
   theme,
   mentions,
-  round((mentions::float / (select sum(mentions) from v_theme_overview_normalized)) * 100, 1) as percentage
+  round((mentions::numeric / (select sum(mentions) from v_theme_overview_normalized)) * 100, 1) as percentage
 from v_theme_overview_normalized
 where theme = 'Other (cluster)';
