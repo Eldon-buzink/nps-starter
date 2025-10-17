@@ -42,6 +42,12 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
     
     console.log(`Found ${data.length} responses for trends for ${title}`);
     
+    // Debug: Check the date range of the data
+    if (data.length > 0) {
+      const dates = data.map(r => r.created_at).sort();
+      console.log(`Date range: ${dates[0]} to ${dates[dates.length - 1]}`);
+    }
+    
     // Group by month and calculate monthly averages
     const monthlyData = new Map<string, { scores: number[], responses: number }>();
     
@@ -75,6 +81,7 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
       };
     }).sort((a, b) => a.period.localeCompare(b.period));
     
+    console.log('Monthly data keys:', Array.from(monthlyData.keys()));
     console.log('Processed trends data:', result);
     return result;
   } catch (error) {
