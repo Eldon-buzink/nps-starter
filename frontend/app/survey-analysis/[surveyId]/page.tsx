@@ -1,225 +1,173 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { FileText, Brain, BarChart3, Download, Share2, Clock, CheckCircle, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { Brain, Tag, Lightbulb, MessageSquare, Loader2, TrendingUp, TrendingDown, Users, BarChart3, Download, Share2 } from "lucide-react";
+import Link from 'next/link';
 
-interface SurveyAnalysisPageProps {
-  params: {
-    surveyId: string;
-  };
-}
-
-interface SurveyStatus {
+interface SurveyAnalysisData {
   survey: {
     id: string;
-    name: string;
-    status: string;
+    survey_name: string;
     total_responses: number;
     upload_date: string;
+    status: string;
   };
-  progress: {
-    processed: number;
-    total: number;
-    percentage: number;
-  };
-  results: {
-    themes: number;
-    insights: number;
-  };
+  themes: {
+    id: string;
+    theme_name: string;
+    mention_count: number;
+    sentiment_score: number;
+    sample_responses: string[];
+  }[];
+  insights: {
+    id: string;
+    insight_type: string;
+    title: string;
+    description: string;
+    priority: number;
+    supporting_data: any;
+  }[];
+  sampleResponses: {
+    id: string;
+    response_text: string;
+    sentiment_score: number;
+    sentiment_label: string;
+    themes: string[];
+  }[];
 }
 
-export default function SurveyAnalysisPage({ params }: SurveyAnalysisPageProps) {
-  const { surveyId } = params;
-  const [status, setStatus] = useState<SurveyStatus | null>(null);
+export default function SurveyAnalysisDetailPage() {
+  const params = useParams();
+  const surveyId = params.surveyId as string;
+  const [analysisData, setAnalysisData] = useState<SurveyAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkStatus = async () => {
+    async function fetchAnalysisData() {
       try {
-        const response = await fetch(`/api/survey-analysis/status?surveyId=${surveyId}`);
-        const data = await response.json();
-        setStatus(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error checking status:', error);
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/survey-analysis/details?surveyId=${surveyId}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch survey analysis details');
+        }
+        const data: SurveyAnalysisData = await response.json();
+        setAnalysisData(data);
+      } catch (err: any) {
+        console.error("Error fetching survey analysis details:", err);
+        setError(err.message || 'An unexpected error occurred.');
+      } finally {
         setLoading(false);
       }
-    };
-
-    checkStatus();
-    
-    // Poll every 3 seconds if still processing
-    const interval = setInterval(() => {
-      if (status?.survey.status === 'processing') {
-        checkStatus();
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [surveyId, status?.survey.status]);
-
-  const handleCheckStatus = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/survey-analysis/status?surveyId=${surveyId}`);
-      const data = await response.json();
-      setStatus(data);
-    } catch (error) {
-      console.error('Error checking status:', error);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  if (loading && !status) {
+    if (surveyId) {
+      fetchAnalysisData();
+    }
+  }, [surveyId]);
+
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-lg text-muted-foreground">Loading survey analysis...</p>
       </div>
     );
   }
 
-  if (!status) {
+  if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Unable to load survey status</p>
-            <Button onClick={handleCheckStatus} className="mt-4">
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8 text-center text-red-600">
+        <p className="text-lg">Error: {error}</p>
+        <Button asChild className="mt-4">
+          <Link href="/survey-analysis">Go back to Survey Upload</Link>
+        </Button>
       </div>
     );
   }
 
-  if (status.survey.status === 'processing') {
+  if (!analysisData || !analysisData.survey) {
     return (
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-3">
-            <FileText className="h-8 w-8 text-blue-600" />
-            <h1 className="text-3xl font-bold">Survey Analysis</h1>
-          </div>
-          <p className="text-lg text-muted-foreground">
-            AI-powered insights from your survey data
-          </p>
-        </div>
-
-        {/* Analysis in Progress */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Clock className="h-6 w-6 text-orange-500" />
-              <CardTitle className="text-xl">Analysis in Progress</CardTitle>
-            </div>
-            <CardDescription>
-              Your survey data is being processed with AI analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progress</span>
-                <span>{status.progress.percentage}%</span>
-              </div>
-              <Progress value={status.progress.percentage} className="w-full" />
-              <div className="text-center text-sm text-muted-foreground">
-                {status.progress.processed} of {status.progress.total} responses processed
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">What's happening:</h3>
-              <ul className="space-y-1 text-sm text-blue-800">
-                <li>• Analyzing response themes and patterns</li>
-                <li>• Calculating sentiment scores</li>
-                <li>• Generating key insights and recommendations</li>
-                <li>• Creating visual summaries</li>
-              </ul>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              This usually takes 1-2 minutes depending on the size of your survey
-            </div>
-
-            <div className="flex justify-center">
-              <Button onClick={handleCheckStatus} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {loading ? 'Checking...' : 'Check Status'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p className="text-lg text-muted-foreground">No analysis data found for this survey.</p>
+        <Button asChild className="mt-4">
+          <Link href="/survey-analysis">Go back to Survey Upload</Link>
+        </Button>
       </div>
     );
   }
 
-  // Analysis completed - show results
+  const { survey, themes, insights, sampleResponses } = analysisData;
+
+  // Calculate sentiment distribution
+  const sentimentCounts = sampleResponses.reduce((acc, response) => {
+    acc[response.sentiment_label] = (acc[response.sentiment_label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Get top themes
+  const topThemes = themes.slice(0, 10);
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center space-x-3">
-          <FileText className="h-8 w-8 text-green-600" />
-          <h1 className="text-3xl font-bold">Survey Analysis Complete</h1>
+          <Brain className="h-8 w-8 text-purple-600" />
+          <h1 className="text-3xl font-bold">Survey Analysis: {survey.survey_name}</h1>
         </div>
         <p className="text-lg text-muted-foreground">
-          AI-powered insights from your survey data
+          AI-powered insights from {survey.total_responses} responses • Uploaded {new Date(survey.upload_date).toLocaleDateString()}
         </p>
+        <div className="flex items-center justify-center space-x-4">
+          <Badge variant="outline" className="text-green-600 border-green-600">
+            Status: {survey.status}
+          </Badge>
+        </div>
       </div>
 
-      {/* Results Summary */}
+      {/* Summary Cards */}
       <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-blue-600" />
               Total Responses
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
-              {status.survey.total_responses}
-            </div>
+          <CardContent>
+            <p className="text-4xl font-bold text-blue-600">{survey.total_responses}</p>
             <p className="text-sm text-muted-foreground">Survey responses analyzed</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              <Brain className="h-5 w-5 text-purple-600" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-purple-600" />
               Themes Identified
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-3xl font-bold text-purple-600">
-              {status.results.themes}
-            </div>
+          <CardContent>
+            <p className="text-4xl font-bold text-purple-600">{themes.length}</p>
             <p className="text-sm text-muted-foreground">Key themes discovered</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-green-600" />
               Insights Generated
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-3xl font-bold text-green-600">
-              {status.results.insights}
-            </div>
+          <CardContent>
+            <p className="text-4xl font-bold text-green-600">{insights.length}</p>
             <p className="text-sm text-muted-foreground">Actionable insights</p>
           </CardContent>
         </Card>
@@ -227,15 +175,174 @@ export default function SurveyAnalysisPage({ params }: SurveyAnalysisPageProps) 
 
       {/* Action Buttons */}
       <div className="flex justify-center space-x-4">
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Download className="h-4 w-4 mr-2" />
+        <Button className="flex items-center gap-2">
+          <Download className="h-4 w-4" />
           Download Report
         </Button>
-        <Button variant="outline">
-          <Share2 className="h-4 w-4 mr-2" />
+        <Button variant="outline" className="flex items-center gap-2">
+          <Share2 className="h-4 w-4" />
           Share Results
         </Button>
       </div>
+
+      {/* Sentiment Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-blue-600" />
+            Sentiment Overview
+          </CardTitle>
+          <CardDescription>Distribution of sentiment across all responses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            {Object.entries(sentimentCounts).map(([sentiment, count]) => (
+              <div key={sentiment} className="text-center p-4 border rounded-lg">
+                <div className={`text-2xl font-bold ${
+                  sentiment === 'positive' ? 'text-green-600' :
+                  sentiment === 'negative' ? 'text-red-600' :
+                  'text-yellow-600'
+                }`}>
+                  {count}
+                </div>
+                <div className="text-sm text-muted-foreground capitalize">{sentiment}</div>
+                <div className="text-xs text-muted-foreground">
+                  {Math.round((count / sampleResponses.length) * 100)}% of responses
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Themes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="h-6 w-6 text-purple-600" />
+            Top Themes
+          </CardTitle>
+          <CardDescription>Most frequently mentioned themes in your survey responses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {topThemes.map((theme, index) => (
+              <div key={theme.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-sm">{theme.theme_name}</h4>
+                  <Badge variant="secondary">#{index + 1}</Badge>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Mentions:</span>
+                    <span className="font-medium">{theme.mention_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Sentiment:</span>
+                    <div className="flex items-center gap-1">
+                      {theme.sentiment_score > 0.6 ? (
+                        <TrendingUp className="h-3 w-3 text-green-600" />
+                      ) : theme.sentiment_score < 0.4 ? (
+                        <TrendingDown className="h-3 w-3 text-red-600" />
+                      ) : (
+                        <div className="h-3 w-3 rounded-full bg-yellow-600" />
+                      )}
+                      <span className="font-medium">
+                        {theme.sentiment_score > 0.6 ? 'Positive' : 
+                         theme.sentiment_score < 0.4 ? 'Negative' : 'Neutral'}
+                      </span>
+                    </div>
+                  </div>
+                  {theme.sample_responses && theme.sample_responses.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      <div className="font-medium mb-1">Sample responses:</div>
+                      <div className="space-y-1">
+                        {theme.sample_responses.slice(0, 2).map((response, idx) => (
+                          <div key={idx} className="truncate italic">"{response}"</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actionable Insights */}
+      {insights.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-green-600" />
+              Actionable Insights
+            </CardTitle>
+            <CardDescription>AI-generated recommendations based on your survey data</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {insights.map((insight, index) => (
+                <div key={insight.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold">{insight.title}</h4>
+                    <Badge variant={insight.priority > 7 ? "destructive" : insight.priority > 4 ? "default" : "secondary"}>
+                      Priority: {insight.priority}/10
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mb-3">{insight.description}</p>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">Type:</span> {insight.insight_type}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sample Responses */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-blue-600" />
+            Sample Responses
+          </CardTitle>
+          <CardDescription>Examples of actual feedback from your survey</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {sampleResponses.slice(0, 5).map((response) => (
+              <div key={response.id} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={
+                      response.sentiment_label === 'positive' ? 'default' :
+                      response.sentiment_label === 'negative' ? 'destructive' :
+                      'secondary'
+                    }>
+                      {response.sentiment_label}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Score: {response.sentiment_score.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm mb-2">"{response.response_text}"</p>
+                {response.themes && response.themes.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {response.themes.map((theme, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {theme}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
