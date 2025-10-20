@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Get survey status
     const { data: survey, error: surveyError } = await supabase
-      .from('survey_analysis_surveys')
+      .from('survey_analyses')
       .select('*')
       .eq('id', surveyId)
       .single();
@@ -28,17 +28,17 @@ export async function GET(request: NextRequest) {
 
     // Get processing progress
     const { data: responses, error: responsesError } = await supabase
-      .from('survey_analysis_responses')
+      .from('survey_responses')
       .select('id, sentiment_score, themes')
       .eq('survey_id', surveyId);
 
     const { data: themes, error: themesError } = await supabase
-      .from('survey_analysis_themes')
+      .from('survey_themes')
       .select('*')
       .eq('survey_id', surveyId);
 
     const { data: insights, error: insightsError } = await supabase
-      .from('survey_analysis_insights')
+      .from('survey_insights')
       .select('*')
       .eq('survey_id', surveyId);
 
@@ -49,10 +49,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       survey: {
         id: survey.id,
-        name: survey.survey_name,
+        name: survey.name,
         status: survey.status,
         total_responses: survey.total_responses,
-        upload_date: survey.upload_date
+        upload_date: survey.created_at
       },
       progress: {
         processed: processedCount,

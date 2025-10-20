@@ -77,11 +77,14 @@ export async function POST(request: NextRequest) {
 
     // Store survey metadata
     const { error: surveyError } = await supabase
-      .from('survey_analysis_surveys')
+      .from('survey_analyses')
       .insert({
         id: surveyId,
-        survey_name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
+        name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
+        original_filename: file.name,
         total_responses: validResponses.length,
+        response_column: responseColumn,
+        headers: headers,
         status: 'processing'
       });
 
@@ -94,13 +97,13 @@ export async function POST(request: NextRequest) {
     const responses = validResponses.map((row, index) => ({
       survey_id: surveyId,
       response_text: row[responseColumn],
-      original_row_data: Object.fromEntries(
+      metadata: Object.fromEntries(
         Object.entries(row).filter(([key, value]) => key !== responseColumn && value)
       )
     }));
 
     const { error: responsesError } = await supabase
-      .from('survey_analysis_responses')
+      .from('survey_responses')
       .insert(responses);
 
     if (responsesError) {

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Get survey data
     const { data: survey, error: surveyError } = await supabase
-      .from('survey_analysis_surveys')
+      .from('survey_analyses')
       .select('*')
       .eq('id', surveyId)
       .single();
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Get responses
     const { data: responses, error: responsesError } = await supabase
-      .from('survey_analysis_responses')
+      .from('survey_responses')
       .select('*')
       .eq('survey_id', surveyId);
 
@@ -119,7 +119,7 @@ Return JSON format:
     // Update responses in database
     for (const response of processedResponses) {
       await supabase
-        .from('survey_analysis_responses')
+        .from('survey_responses')
         .update({
           sentiment_score: response.sentiment_score,
           sentiment_label: response.sentiment_label,
@@ -133,7 +133,7 @@ Return JSON format:
     // Create theme records
     for (const [themeName, themeData] of themes) {
       await supabase
-        .from('survey_analysis_themes')
+        .from('survey_themes')
         .insert({
           survey_id: surveyId,
           theme_name: themeName,
@@ -151,7 +151,7 @@ Return JSON format:
     // Create insight records
     for (const insight of insights) {
       await supabase
-        .from('survey_analysis_insights')
+        .from('survey_insights')
         .insert({
           survey_id: surveyId,
           insight_type: insight.type,
@@ -163,7 +163,7 @@ Return JSON format:
 
     // Update survey status
     await supabase
-      .from('survey_analysis_surveys')
+      .from('survey_analyses')
       .update({ 
         status: 'completed',
         total_responses: processedResponses.length
