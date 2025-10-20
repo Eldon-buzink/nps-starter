@@ -42,12 +42,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`Processing ${responses.length} responses for survey ${surveyId}`);
 
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OpenAI API key is missing');
+      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 });
+    }
+
     // Process responses with AI
     const processedResponses = [];
     const themes = new Map<string, { count: number; responses: any[]; keywords: Set<string> }>();
 
     for (const response of responses) {
       try {
+        console.log(`Processing response ${response.id}: ${response.response_text.substring(0, 50)}...`);
         // Analyze with OpenAI
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -79,6 +86,7 @@ Return JSON format:
         });
 
         const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+        console.log(`Analysis result for response ${response.id}:`, analysis);
         
         // Update response with analysis
         const updatedResponse = {
@@ -112,13 +120,23 @@ Return JSON format:
 
       } catch (error) {
         console.error(`Error processing response ${response.id}:`, error);
-        // Continue with next response
+        // Continue with next response but add to processedResponses with default values
+        const defaultResponse = {
+          ...response,
+          sentiment_score: 0,
+          sentiment_label: 'neutral',
+          themes: [],
+          keywords: [],
+          nps_score: null
+        };
+        processedResponses.push(defaultResponse);
       }
     }
 
     // Update responses in database
+    console.log(`Updating ${processedResponses.length} responses in database...`);
     for (const response of processedResponses) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('survey_responses')
         .update({
           sentiment_score: response.sentiment_score,
@@ -128,11 +146,16 @@ Return JSON format:
           nps_score: response.nps_score
         })
         .eq('id', response.id);
+      
+      if (updateError) {
+        console.error(`Error updating response ${response.id}:`, updateError);
+      }
     }
 
     // Create theme records
+    console.log(`Creating ${themes.size} theme records...`);
     for (const [themeName, themeData] of themes) {
-      await supabase
+      const { error: themeError } = await supabase
         .from('survey_themes')
         .insert({
           survey_id: surveyId,
@@ -143,14 +166,19 @@ Return JSON format:
           top_keywords: Array.from(themeData.keywords).slice(0, 10),
           sample_responses: themeData.responses.slice(0, 3).map(r => r.response_text)
         });
+      
+      if (themeError) {
+        console.error(`Error creating theme ${themeName}:`, themeError);
+      }
     }
 
     // Generate insights
     const insights = await generateInsights(processedResponses, themes);
 
     // Create insight records
+    console.log(`Creating ${insights.length} insight records...`);
     for (const insight of insights) {
-      await supabase
+      const { error: insightError } = await supabase
         .from('survey_insights')
         .insert({
           survey_id: surveyId,
@@ -159,6 +187,10 @@ Return JSON format:
           related_themes: insight.themes,
           impact_score: insight.impact
         });
+      
+      if (insightError) {
+        console.error(`Error creating insight:`, insightError);
+      }
     }
 
     // Update survey status
