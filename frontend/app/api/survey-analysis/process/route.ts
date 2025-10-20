@@ -88,13 +88,13 @@ Return JSON format:
         const analysis = JSON.parse(completion.choices[0].message.content || '{}');
         console.log(`Analysis result for response ${response.id}:`, analysis);
         
-        // Update response with analysis
+        // Update response with analysis (store full blob in ai_analysis)
         const updatedResponse = {
           ...response,
+          ai_analysis: analysis,
           sentiment_score: analysis.sentiment_score || 0,
           sentiment_label: analysis.sentiment || 'neutral',
           themes: analysis.themes || [],
-          keywords: analysis.keywords || [],
           nps_score: analysis.nps_score || null
         };
 
@@ -109,9 +109,7 @@ Return JSON format:
             const themeData = themes.get(theme)!;
             themeData.count++;
             themeData.responses.push(response);
-            if (analysis.keywords) {
-              analysis.keywords.forEach((keyword: string) => themeData.keywords.add(keyword));
-            }
+            // collect up to a few sample responses per theme later
           }
         }
 
@@ -139,6 +137,7 @@ Return JSON format:
       const { error: updateError } = await supabase
         .from('survey_responses')
         .update({
+          ai_analysis: response.ai_analysis,
           sentiment_score: response.sentiment_score,
           sentiment_label: response.sentiment_label,
           themes: response.themes,
@@ -151,17 +150,26 @@ Return JSON format:
       }
     }
 
-    // Create theme records
+    // Clear previous theme and insight records for idempotent reruns
+    await supabase.from('survey_themes').delete().eq('survey_id', surveyId);
+    await supabase.from('survey_insights').delete().eq('survey_id', surveyId);
+
+    // Create theme records (with averaged sentiment and sample responses)
     console.log(`Creating ${themes.size} theme records...`);
     for (const [themeName, themeData] of themes) {
+      const themeResponses = processedResponses.filter(r => (r.themes || []).includes(themeName));
+      const sentimentAvg = themeResponses.length > 0
+        ? themeResponses.reduce((sum, r) => sum + (r.sentiment_score || 0), 0) / themeResponses.length
+        : 0;
+      const samples = themeResponses.slice(0, 3).map(r => r.response_text);
       const { error: themeError } = await supabase
         .from('survey_themes')
         .insert({
           survey_id: surveyId,
           theme_name: themeName,
           mention_count: themeData.count,
-          sentiment_score: themeData.responses.reduce((sum, r) => sum + (r.sentiment_score || 0), 0) / themeData.responses.length,
-          sample_responses: themeData.responses.slice(0, 3).map(r => r.response_text)
+          sentiment_score: sentimentAvg,
+          sample_responses: samples
         });
       
       if (themeError) {
@@ -220,7 +228,7 @@ Return JSON format:
 async function generateInsights(responses: any[], themes: Map<string, any>) {
   const insights = [];
   
-  // Top themes insight
+  // Top themes insight (summary)
   const topThemes = Array.from(themes.entries())
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 3);
@@ -267,12 +275,28 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
 
     if (topNegativeTheme) {
       insights.push({
-        type: 'problem',
-        content: `Main concern: ${topNegativeTheme[0]} (${topNegativeTheme[1]} negative mentions)`,
+        type: 'sentiment',
+        content: `Main concern: ${topNegativeTheme[0]} (${topNegativeTheme[1]} negatieve vermeldingen)`,
         themes: [topNegativeTheme[0]],
         impact: 0.9
       });
     }
+  }
+
+  // Concrete recommendations based on top themes
+  if (topThemes.length > 0) {
+    const recThemes = topThemes.map(([name]) => name);
+    const sampleA = responses.find(r => (r.themes || []).includes(recThemes[0]))?.response_text;
+    const sampleB = responses.find(r => (r.themes || []).includes(recThemes[1]))?.response_text;
+    const sampleC = responses.find(r => (r.themes || []).includes(recThemes[2]))?.response_text;
+
+    insights.push({
+      type: 'recommendation',
+      title: 'Concrete Aanbevelingen',
+      content: `Omdat we de thema's ${recThemes.join(', ')} hebben geïdentificeerd uit open antwoorden, met feedback zoals: \n\nA) "${sampleA || '—'}"\nB) "${sampleB || '—'}"\nC) "${sampleC || '—'}"\n\nStel voor: \n1) UX-fricties prioriteren en 3 concrete UI-verbeteringen uitwerken\n2) Snelle usability-test met 5 gebruikers op kritieke flows\n3) Changelog/tooltip in-product om wijzigingen te duiden en supportvragen te verlagen`,
+      themes: recThemes,
+      impact: 0.85
+    });
   }
 
   return insights;

@@ -133,8 +133,8 @@ export default function SurveyAnalysisDetailPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      {/* Summary Cards (+ Sentiment Overview condensed) */}
+      <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -171,6 +171,29 @@ export default function SurveyAnalysisDetailPage() {
             <p className="text-sm text-muted-foreground">Actionable insights</p>
           </CardContent>
         </Card>
+        {/* Condensed Sentiment Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Sentiment
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {(['positive','neutral','negative'] as const).map((sent) => (
+                <div key={sent} className="p-2 border rounded">
+                  <div className={`text-xl font-bold ${
+                    sent === 'positive' ? 'text-green-600' : sent === 'negative' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>
+                    {sentimentCounts[sent] || 0}
+                  </div>
+                  <div className="text-xs capitalize text-muted-foreground">{sent}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Action Buttons */}
@@ -185,35 +208,7 @@ export default function SurveyAnalysisDetailPage() {
         </Button>
       </div>
 
-      {/* Sentiment Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-            Sentiment Overview
-          </CardTitle>
-          <CardDescription>Distribution of sentiment across all responses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-4">
-            {Object.entries(sentimentCounts).map(([sentiment, count]) => (
-              <div key={sentiment} className="text-center p-4 border rounded-lg">
-                <div className={`text-2xl font-bold ${
-                  sentiment === 'positive' ? 'text-green-600' :
-                  sentiment === 'negative' ? 'text-red-600' :
-                  'text-yellow-600'
-                }`}>
-                  {count}
-                </div>
-                <div className="text-sm text-muted-foreground capitalize">{sentiment}</div>
-                <div className="text-xs text-muted-foreground">
-                  {Math.round((count / sampleResponses.length) * 100)}% of responses
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Removed large Sentiment section (now condensed above) */}
 
       {/* Top Themes */}
       <Card>
@@ -225,7 +220,7 @@ export default function SurveyAnalysisDetailPage() {
           <CardDescription>Most frequently mentioned themes in your survey responses</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-6">
             {topThemes.map((theme, index) => (
               <div key={theme.id} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">

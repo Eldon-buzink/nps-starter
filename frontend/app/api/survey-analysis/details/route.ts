@@ -72,13 +72,39 @@ export async function GET(request: Request) {
       status: surveyData.status
     };
 
-    const mappedThemes = (themesData || []).map(theme => ({
-      id: theme.id,
-      theme_name: theme.theme_name,
-      mention_count: theme.mention_count,
-      sentiment_score: theme.sentiment_score,
-      sample_responses: theme.sample_responses || []
-    }));
+    // Deduplicate themes with the same name (in case the survey was reprocessed)
+    const themeAccumulator = new Map<string, { id: string; theme_name: string; mention_count: number; sentiment_sum: number; sentiment_samples: number; sample_responses: string[] }>();
+    (themesData || []).forEach((t: any) => {
+      const key = String(t.theme_name).trim().toLowerCase();
+      if (!themeAccumulator.has(key)) {
+        themeAccumulator.set(key, {
+          id: t.id,
+          theme_name: t.theme_name,
+          mention_count: t.mention_count || 0,
+          sentiment_sum: Number(t.sentiment_score || 0) * (t.mention_count || 1),
+          sentiment_samples: (t.mention_count || 1),
+          sample_responses: Array.isArray(t.sample_responses) ? t.sample_responses.slice(0, 5) : []
+        });
+      } else {
+        const acc = themeAccumulator.get(key)!;
+        acc.mention_count += t.mention_count || 0;
+        acc.sentiment_sum += Number(t.sentiment_score || 0) * (t.mention_count || 1);
+        acc.sentiment_samples += (t.mention_count || 1);
+        if (Array.isArray(t.sample_responses)) {
+          acc.sample_responses = Array.from(new Set([...acc.sample_responses, ...t.sample_responses])).slice(0, 5);
+        }
+      }
+    });
+
+    const mappedThemes = Array.from(themeAccumulator.values())
+      .map(t => ({
+        id: t.id,
+        theme_name: t.theme_name,
+        mention_count: t.mention_count,
+        sentiment_score: t.sentiment_samples > 0 ? (t.sentiment_sum / t.sentiment_samples) : 0,
+        sample_responses: t.sample_responses
+      }))
+      .sort((a, b) => (b.mention_count - a.mention_count));
 
     const mappedInsights = (insightsData || []).map(insight => ({
       id: insight.id,
