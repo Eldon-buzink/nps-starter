@@ -89,13 +89,17 @@ export async function GET(request: Request) {
       supporting_data: insight.supporting_data
     }));
 
-    const mappedResponses = (responsesData || []).map(response => ({
-      id: response.id,
-      response_text: response.response_text,
-      sentiment_score: response.ai_analysis?.sentiment_score || 0.5,
-      sentiment_label: response.ai_analysis?.sentiment_label || 'neutral',
-      themes: response.ai_analysis?.themes || []
-    }));
+    const mappedResponses = (responsesData || []).map(response => {
+      const aiAnalysis = response.ai_analysis || {};
+      
+      return {
+        id: response.id,
+        response_text: response.response_text,
+        sentiment_score: aiAnalysis.sentiment_score || 0.5,
+        sentiment_label: aiAnalysis.sentiment || 'neutral',
+        themes: aiAnalysis.themes || []
+      };
+    });
 
     return NextResponse.json({
       survey: mappedSurvey,
