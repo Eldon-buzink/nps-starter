@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
     const responses = validResponses.map((row, index) => ({
       survey_id: surveyId,
       response_id: uuidv4(), // Generate unique response ID
+      row_number: index + 2, // +2 because we skip header and start from 1
       response_text: row[responseColumn],
       metadata: Object.fromEntries(
         Object.entries(row).filter(([key, value]) => key !== responseColumn && value)
