@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
     // Store individual responses
     const responses = validResponses.map((row, index) => ({
       survey_id: surveyId,
+      response_id: uuidv4(), // Generate unique response ID
       response_text: row[responseColumn],
       metadata: Object.fromEntries(
         Object.entries(row).filter(([key, value]) => key !== responseColumn && value)
