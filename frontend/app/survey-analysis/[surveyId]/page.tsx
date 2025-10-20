@@ -265,36 +265,67 @@ export default function SurveyAnalysisDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Key Insights */}
+      {/* Survey Insights */}
       {insights.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-yellow-600" />
-              Key Insights
-            </CardTitle>
-            <CardDescription>Clear, actionable insights from your survey responses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {insights.map((insight, index) => (
-                <div key={insight.id} className="border rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-lg">{insight.title}</h4>
-                    <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
-                      Priority: {insight.priority}/10
-                    </Badge>
-                  </div>
-                  <div className="prose prose-sm max-w-none">
-                    <div className="whitespace-pre-line text-sm leading-relaxed">
-                      {insight.description}
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">Survey Analysis Results</h2>
+            <p className="text-muted-foreground">Evidence-based insights for your team</p>
+          </div>
+          
+          <div className="grid gap-6">
+            {insights.map((insight, index) => {
+              const getCardStyle = (type: string) => {
+                switch (type) {
+                  case 'problem':
+                    return 'border-red-200 bg-red-50';
+                  case 'success':
+                    return 'border-green-200 bg-green-50';
+                  case 'recommendation':
+                    return 'border-blue-200 bg-blue-50';
+                  default:
+                    return 'border-gray-200 bg-gray-50';
+                }
+              };
+
+              const getIcon = (type: string) => {
+                switch (type) {
+                  case 'problem':
+                    return '⚠️';
+                  case 'success':
+                    return '✅';
+                  case 'recommendation':
+                    return '📋';
+                  default:
+                    return '📊';
+                }
+              };
+
+              return (
+                <Card key={insight.id} className={`${getCardStyle(insight.insight_type)}`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl">{getIcon(insight.insight_type)}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-lg">{insight.title}</h3>
+                          <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
+                            Priority: {insight.priority}/10
+                          </Badge>
+                        </div>
+                        <div className="prose prose-sm max-w-none">
+                          <div className="whitespace-pre-line text-sm leading-relaxed">
+                            {insight.description}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Sample Responses */}

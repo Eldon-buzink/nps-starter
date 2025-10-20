@@ -228,11 +228,6 @@ Return JSON format:
 async function generateInsights(responses: any[], themes: Map<string, any>) {
   const insights = [];
   
-  // Get top themes for recommendations
-  const topThemes = Array.from(themes.entries())
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 3);
-
   // Get sentiment breakdown
   const sentimentCounts = responses.reduce((acc, r) => {
     acc[r.sentiment_label] = (acc[r.sentiment_label] || 0) + 1;
@@ -244,43 +239,24 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
   const negativeCount = sentimentCounts.negative || 0;
   const neutralCount = sentimentCounts.neutral || 0;
 
-  // Key Insight 1: Overall Sentiment Summary
+  // Insight 1: Customer Satisfaction Overview
   const dominantSentiment = Object.entries(sentimentCounts)
     .sort((a, b) => b[1] - a[1])[0];
 
   if (dominantSentiment) {
+    const satisfactionRate = Math.round((positiveCount / totalResponses) * 100);
     insights.push({
       type: 'summary',
-      title: 'Overall Sentiment',
-      content: `Based on ${totalResponses} responses: ${positiveCount} positive, ${neutralCount} neutral, ${negativeCount} negative. Overall sentiment is ${dominantSentiment[0]}.`,
+      title: 'Customer Satisfaction Overview',
+      content: `${satisfactionRate}% of customers are satisfied (${positiveCount}/${totalResponses} positive responses). ${negativeCount} customers reported issues that need attention.`,
       themes: [],
-      impact: 0.7
-    });
-  }
-
-  // Key Insight 2: Top Themes Summary
-  if (topThemes.length > 0) {
-    insights.push({
-      type: 'summary',
-      title: 'Key Themes Identified',
-      content: `Most frequently mentioned themes: ${topThemes.map(([name, data]) => `${name} (${data.count} mentions)`).join(', ')}.`,
-      themes: topThemes.map(([name]) => name),
       impact: 0.8
     });
   }
 
-  // Key Insight 3: Structured Recommendations
-  if (topThemes.length > 0) {
-    const recThemes = topThemes.map(([name]) => name);
-    
-    // Get sample responses for each theme
-    const sampleResponses = recThemes.map(theme => {
-      const response = responses.find(r => (r.themes || []).includes(theme));
-      return response ? response.response_text : null;
-    }).filter(Boolean);
-
-    // Get negative themes for problem identification
-    const negativeResponses = responses.filter(r => r.sentiment_label === 'negative');
+  // Insight 2: Critical Issues Requiring Immediate Attention
+  const negativeResponses = responses.filter(r => r.sentiment_label === 'negative');
+  if (negativeResponses.length > 0) {
     const negativeThemes = new Map();
     negativeResponses.forEach(r => {
       r.themes?.forEach((theme: string) => {
@@ -291,25 +267,94 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     const topNegativeTheme = Array.from(negativeThemes.entries())
       .sort((a, b) => b[1] - a[1])[0];
 
-    let recommendationContent = `**Key Findings:**\n`;
-    recommendationContent += `• Top themes: ${recThemes.join(', ')}\n`;
     if (topNegativeTheme) {
-      recommendationContent += `• Main concern: ${topNegativeTheme[0]} (${topNegativeTheme[1]} negative mentions)\n`;
+      const sampleNegative = negativeResponses.find(r => 
+        (r.themes || []).includes(topNegativeTheme[0])
+      )?.response_text;
+
+      insights.push({
+        type: 'problem',
+        title: 'Critical Issue Identified',
+        content: `${topNegativeTheme[1]} customers reported problems with ${topNegativeTheme[0]}. Sample feedback: "${sampleNegative}"`,
+        themes: [topNegativeTheme[0]],
+        impact: 0.9
+      });
     }
-    
-    recommendationContent += `\n**Evidence from responses:**\n`;
-    sampleResponses.slice(0, 3).forEach((response, index) => {
-      recommendationContent += `${String.fromCharCode(65 + index)}) "${response}"\n`;
+  }
+
+  // Insight 3: What's Working Well (Positive Themes)
+  const positiveResponses = responses.filter(r => r.sentiment_label === 'positive');
+  if (positiveResponses.length > 0) {
+    const positiveThemes = new Map();
+    positiveResponses.forEach(r => {
+      r.themes?.forEach((theme: string) => {
+        positiveThemes.set(theme, (positiveThemes.get(theme) || 0) + 1);
+      });
     });
 
-    recommendationContent += `\n**Recommendations:**\n`;
-    recommendationContent += `1. Focus on ${recThemes[0]} improvements - highest mention rate\n`;
-    recommendationContent += `2. Address ${topNegativeTheme ? topNegativeTheme[0] : recThemes[1]} concerns - main pain point\n`;
-    recommendationContent += `3. Implement user testing for ${recThemes.slice(0, 2).join(' and ')} areas\n`;
+    const topPositiveTheme = Array.from(positiveThemes.entries())
+      .sort((a, b) => b[1] - a[1])[0];
+
+    if (topPositiveTheme) {
+      const samplePositive = positiveResponses.find(r => 
+        (r.themes || []).includes(topPositiveTheme[0])
+      )?.response_text;
+
+      insights.push({
+        type: 'success',
+        title: 'What Customers Love',
+        content: `${topPositiveTheme[1]} customers praised ${topPositiveTheme[0]}. Sample feedback: "${samplePositive}"`,
+        themes: [topPositiveTheme[0]],
+        impact: 0.7
+      });
+    }
+  }
+
+  // Insight 4: Specific Actionable Recommendations
+  const topThemes = Array.from(themes.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 3);
+
+  if (topThemes.length > 0) {
+    const recThemes = topThemes.map(([name]) => name);
+    
+    // Get specific evidence for each theme
+    const evidenceMap = new Map();
+    recThemes.forEach(theme => {
+      const themeResponses = responses.filter(r => (r.themes || []).includes(theme));
+      const positive = themeResponses.filter(r => r.sentiment_label === 'positive');
+      const negative = themeResponses.filter(r => r.sentiment_label === 'negative');
+      
+      evidenceMap.set(theme, {
+        total: themeResponses.length,
+        positive: positive.length,
+        negative: negative.length,
+        samplePositive: positive[0]?.response_text,
+        sampleNegative: negative[0]?.response_text
+      });
+    });
+
+    let recommendationContent = `**Based on ${totalResponses} customer responses, here are specific actions your team should take:**\n\n`;
+    
+    recThemes.forEach((theme, index) => {
+      const evidence = evidenceMap.get(theme);
+      if (evidence) {
+        recommendationContent += `**${index + 1}. ${theme.charAt(0).toUpperCase() + theme.slice(1)}**\n`;
+        recommendationContent += `• Mentioned by ${evidence.total} customers (${evidence.positive} positive, ${evidence.negative} negative)\n`;
+        
+        if (evidence.samplePositive) {
+          recommendationContent += `• Positive feedback: "${evidence.samplePositive}"\n`;
+        }
+        if (evidence.sampleNegative) {
+          recommendationContent += `• Issue reported: "${evidence.sampleNegative}"\n`;
+        }
+        recommendationContent += `• Action: ${evidence.negative > 0 ? 'Address the issues mentioned above' : 'Continue current approach - customers are happy'}\n\n`;
+      }
+    });
 
     insights.push({
       type: 'recommendation',
-      title: 'Actionable Recommendations',
+      title: 'Team Action Plan',
       content: recommendationContent,
       themes: recThemes,
       impact: 0.9
