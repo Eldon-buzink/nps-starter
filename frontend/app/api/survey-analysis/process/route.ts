@@ -142,7 +142,6 @@ Return JSON format:
           sentiment_score: response.sentiment_score,
           sentiment_label: response.sentiment_label,
           themes: response.themes,
-          keywords: response.keywords,
           nps_score: response.nps_score
         })
         .eq('id', response.id);
@@ -172,6 +171,7 @@ Return JSON format:
 
     // Generate insights
     const insights = await generateInsights(processedResponses, themes);
+    console.log(`Generated ${insights.length} insights:`, insights);
 
     // Create insight records
     console.log(`Creating ${insights.length} insight records...`);
@@ -183,7 +183,7 @@ Return JSON format:
           insight_type: insight.type,
           title: insight.title || insight.type,
           description: insight.content,
-          priority: insight.impact || 1,
+          priority: Math.round((insight.impact || 0.5) * 10),
           supporting_data: {
             related_themes: insight.themes,
             impact_score: insight.impact
