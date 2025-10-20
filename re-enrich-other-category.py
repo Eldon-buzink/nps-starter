@@ -71,7 +71,12 @@ def get_other_category_responses(limit: int = 100) -> List[Dict[str, Any]]:
 def enrich_with_improved_classification(response_data: Dict[str, Any]) -> Dict[str, Any]:
     """Re-enrich a response with improved theme classification"""
     
-    nps_response = response_data['nps_response']
+    # Handle different data structures
+    if 'nps_response' in response_data:
+        nps_response = response_data['nps_response']
+    else:
+        nps_response = response_data
+    
     comment = nps_response.get('nps_explanation', '')
     
     if not comment or len(comment.strip()) < 10:
@@ -167,11 +172,12 @@ Example: ["content_kwaliteit", "bezorging"]
         return {
             'themes': themes,
             'original_themes': response_data.get('themes', []),
-            'response_id': response_data['response_id']
+            'response_id': response_data.get('response_id', nps_response.get('id', ''))
         }
         
     except Exception as e:
-        print(f"Error enriching response {response_data['response_id']}: {e}")
+        response_id = response_data.get('response_id', nps_response.get('id', 'unknown'))
+        print(f"Error enriching response {response_id}: {e}")
         return None
 
 def update_enrichment(enrichment_id: str, new_themes: List[str]) -> bool:

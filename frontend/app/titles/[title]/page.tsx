@@ -20,8 +20,8 @@ async function getTitleKpis(title: string, params: {start?:string,end?:string,su
       .from('nps_response')
       .select('nps_score')
       .eq('title_text', title)
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2025-12-31');
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -55,11 +55,11 @@ async function getTitleThemes(title: string, params: {start?:string,end?:string,
       .from('v_theme_assignments_normalized')
       .select(`
         canonical_theme,
-        nps_response!inner(title_text, nps_score, created_at)
+        nps_response!inner(title_text, nps_score, creation_date)
       `)
       .eq('nps_response.title_text', title)
-      .gte('nps_response.created_at', params.start || '2024-01-01')
-      .lte('nps_response.created_at', params.end || '2025-12-31');
+      .gte('nps_response.creation_date', params.start || '2024-01-01')
+      .lte('nps_response.creation_date', params.end || '2025-12-31');
 
     if (error) {
       console.error('Error fetching title themes:', error);
@@ -130,12 +130,12 @@ async function getTitleResponses(title: string, params: {start?:string,end?:stri
   try {
     let query = supabase
       .from('nps_response')
-      .select('id, nps_score, nps_explanation, created_at')
+      .select('id, nps_score, nps_explanation, creation_date')
       .eq('title_text', title)
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2025-12-31')
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31')
       .not('nps_explanation', 'is', null)
-      .order('created_at', { ascending: false })
+      .order('creation_date', { ascending: false })
       .limit(10);
     
     if (params.survey) {
@@ -359,7 +359,7 @@ export default async function TitlePage({ params, searchParams }: TitlePageProps
                           {response.nps_score}/10
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(response.created_at).toLocaleDateString('nl-NL')}
+                          {new Date(response.creation_date).toLocaleDateString('nl-NL')}
                         </span>
                       </div>
                     </div>
