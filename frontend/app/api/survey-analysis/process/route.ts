@@ -160,10 +160,8 @@ Return JSON format:
         .insert({
           survey_id: surveyId,
           theme_name: themeName,
-          total_mentions: themeData.count,
-          unique_responses: themeData.responses.length,
-          average_sentiment_score: themeData.responses.reduce((sum, r) => sum + (r.sentiment_score || 0), 0) / themeData.responses.length,
-          top_keywords: Array.from(themeData.keywords).slice(0, 10),
+          mention_count: themeData.count,
+          sentiment_score: themeData.responses.reduce((sum, r) => sum + (r.sentiment_score || 0), 0) / themeData.responses.length,
           sample_responses: themeData.responses.slice(0, 3).map(r => r.response_text)
         });
       
@@ -183,9 +181,13 @@ Return JSON format:
         .insert({
           survey_id: surveyId,
           insight_type: insight.type,
-          content: insight.content,
-          related_themes: insight.themes,
-          impact_score: insight.impact
+          title: insight.title || insight.type,
+          description: insight.content,
+          priority: insight.impact || 1,
+          supporting_data: {
+            related_themes: insight.themes,
+            impact_score: insight.impact
+          }
         });
       
       if (insightError) {
