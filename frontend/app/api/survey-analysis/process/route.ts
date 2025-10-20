@@ -228,41 +228,59 @@ Return JSON format:
 async function generateInsights(responses: any[], themes: Map<string, any>) {
   const insights = [];
   
-  // Top themes insight (summary)
+  // Get top themes for recommendations
   const topThemes = Array.from(themes.entries())
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 3);
-  
-  if (topThemes.length > 0) {
-    insights.push({
-      type: 'summary',
-      content: `Top themes identified: ${topThemes.map(([name, data]) => `${name} (${data.count} mentions)`).join(', ')}`,
-      themes: topThemes.map(([name]) => name),
-      impact: 0.8
-    });
-  }
 
-  // Sentiment insight
+  // Get sentiment breakdown
   const sentimentCounts = responses.reduce((acc, r) => {
     acc[r.sentiment_label] = (acc[r.sentiment_label] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
+  const totalResponses = responses.length;
+  const positiveCount = sentimentCounts.positive || 0;
+  const negativeCount = sentimentCounts.negative || 0;
+  const neutralCount = sentimentCounts.neutral || 0;
+
+  // Key Insight 1: Overall Sentiment Summary
   const dominantSentiment = Object.entries(sentimentCounts)
     .sort((a, b) => b[1] - a[1])[0];
 
   if (dominantSentiment) {
     insights.push({
-      type: 'sentiment',
-      content: `Overall sentiment is ${dominantSentiment[0]} (${dominantSentiment[1]} responses)`,
+      type: 'summary',
+      title: 'Overall Sentiment',
+      content: `Based on ${totalResponses} responses: ${positiveCount} positive, ${neutralCount} neutral, ${negativeCount} negative. Overall sentiment is ${dominantSentiment[0]}.`,
       themes: [],
       impact: 0.7
     });
   }
 
-  // Problem areas insight
-  const negativeResponses = responses.filter(r => r.sentiment_label === 'negative');
-  if (negativeResponses.length > 0) {
+  // Key Insight 2: Top Themes Summary
+  if (topThemes.length > 0) {
+    insights.push({
+      type: 'summary',
+      title: 'Key Themes Identified',
+      content: `Most frequently mentioned themes: ${topThemes.map(([name, data]) => `${name} (${data.count} mentions)`).join(', ')}.`,
+      themes: topThemes.map(([name]) => name),
+      impact: 0.8
+    });
+  }
+
+  // Key Insight 3: Structured Recommendations
+  if (topThemes.length > 0) {
+    const recThemes = topThemes.map(([name]) => name);
+    
+    // Get sample responses for each theme
+    const sampleResponses = recThemes.map(theme => {
+      const response = responses.find(r => (r.themes || []).includes(theme));
+      return response ? response.response_text : null;
+    }).filter(Boolean);
+
+    // Get negative themes for problem identification
+    const negativeResponses = responses.filter(r => r.sentiment_label === 'negative');
     const negativeThemes = new Map();
     negativeResponses.forEach(r => {
       r.themes?.forEach((theme: string) => {
@@ -273,29 +291,28 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     const topNegativeTheme = Array.from(negativeThemes.entries())
       .sort((a, b) => b[1] - a[1])[0];
 
+    let recommendationContent = `**Key Findings:**\n`;
+    recommendationContent += `• Top themes: ${recThemes.join(', ')}\n`;
     if (topNegativeTheme) {
-      insights.push({
-        type: 'sentiment',
-        content: `Main concern: ${topNegativeTheme[0]} (${topNegativeTheme[1]} negatieve vermeldingen)`,
-        themes: [topNegativeTheme[0]],
-        impact: 0.9
-      });
+      recommendationContent += `• Main concern: ${topNegativeTheme[0]} (${topNegativeTheme[1]} negative mentions)\n`;
     }
-  }
+    
+    recommendationContent += `\n**Evidence from responses:**\n`;
+    sampleResponses.slice(0, 3).forEach((response, index) => {
+      recommendationContent += `${String.fromCharCode(65 + index)}) "${response}"\n`;
+    });
 
-  // Concrete recommendations based on top themes
-  if (topThemes.length > 0) {
-    const recThemes = topThemes.map(([name]) => name);
-    const sampleA = responses.find(r => (r.themes || []).includes(recThemes[0]))?.response_text;
-    const sampleB = responses.find(r => (r.themes || []).includes(recThemes[1]))?.response_text;
-    const sampleC = responses.find(r => (r.themes || []).includes(recThemes[2]))?.response_text;
+    recommendationContent += `\n**Recommendations:**\n`;
+    recommendationContent += `1. Focus on ${recThemes[0]} improvements - highest mention rate\n`;
+    recommendationContent += `2. Address ${topNegativeTheme ? topNegativeTheme[0] : recThemes[1]} concerns - main pain point\n`;
+    recommendationContent += `3. Implement user testing for ${recThemes.slice(0, 2).join(' and ')} areas\n`;
 
     insights.push({
       type: 'recommendation',
-      title: 'Concrete Aanbevelingen',
-      content: `Omdat we de thema's ${recThemes.join(', ')} hebben geïdentificeerd uit open antwoorden, met feedback zoals: \n\nA) "${sampleA || '—'}"\nB) "${sampleB || '—'}"\nC) "${sampleC || '—'}"\n\nStel voor: \n1) UX-fricties prioriteren en 3 concrete UI-verbeteringen uitwerken\n2) Snelle usability-test met 5 gebruikers op kritieke flows\n3) Changelog/tooltip in-product om wijzigingen te duiden en supportvragen te verlagen`,
+      title: 'Actionable Recommendations',
+      content: recommendationContent,
       themes: recThemes,
-      impact: 0.85
+      impact: 0.9
     });
   }
 

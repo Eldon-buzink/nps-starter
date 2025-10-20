@@ -265,29 +265,30 @@ export default function SurveyAnalysisDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Actionable Insights */}
+      {/* Key Insights */}
       {insights.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 text-green-600" />
-              Actionable Insights
+              <Lightbulb className="h-6 w-6 text-yellow-600" />
+              Key Insights
             </CardTitle>
-            <CardDescription>AI-generated recommendations based on your survey data</CardDescription>
+            <CardDescription>Clear, actionable insights from your survey responses</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {insights.map((insight, index) => (
-                <div key={insight.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold">{insight.title}</h4>
-                    <Badge variant={insight.priority > 7 ? "destructive" : insight.priority > 4 ? "default" : "secondary"}>
+                <div key={insight.id} className="border rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-lg">{insight.title}</h4>
+                    <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
                       Priority: {insight.priority}/10
                     </Badge>
                   </div>
-                  <p className="text-muted-foreground mb-3">{insight.description}</p>
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Type:</span> {insight.insight_type}
+                  <div className="prose prose-sm max-w-none">
+                    <div className="whitespace-pre-line text-sm leading-relaxed">
+                      {insight.description}
+                    </div>
                   </div>
                 </div>
               ))}
