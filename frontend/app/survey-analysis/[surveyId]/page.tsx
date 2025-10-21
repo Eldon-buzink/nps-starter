@@ -318,7 +318,9 @@ export default function SurveyAnalysisDetailPage() {
           </div>
           
           <div className="grid gap-6">
-            {insights.map((insight, index) => {
+            {insights
+              .filter(insight => insight.insight_type !== 'theme') // Remove individual theme analysis cards
+              .map((insight, index) => {
               const getCardStyle = (type: string) => {
                 switch (type) {
                   case 'theme':

@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
             {
               role: "system",
               content: `Analyze this survey response and extract:
-1. Sentiment (positive/negative/neutral)
-2. Main themes (2-3 key themes)
+1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
+2. Main themes (2-3 key themes that capture the main topics discussed)
 
 Return JSON format:
 {
