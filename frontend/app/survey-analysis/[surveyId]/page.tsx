@@ -117,13 +117,19 @@ export default function SurveyAnalysisDetailPage() {
   
   // Calculate overall sentiment and cross-question themes
   const totalResponses = survey.total_responses;
-  const totalQuestions = survey.question_columns?.length || 0;
+  const totalQuestions = survey.question_columns?.length || (survey.is_multi_question ? 4 : 1); // Default to 4 for multi-question, 1 for single
   
   let overallPositive = 0;
   let overallNegative = 0;
   let overallNeutral = 0;
   const themeCounts: { [key: string]: number } = {};
   
+  // Use themes data for cross-question analysis
+  themes.forEach(theme => {
+    themeCounts[theme.theme_name] = (themeCounts[theme.theme_name] || 0) + theme.mention_count;
+  });
+  
+  // Calculate sentiment from sample responses
   sampleResponses.forEach(response => {
     if (response.sentiment_label) {
       switch (response.sentiment_label) {
@@ -137,11 +143,6 @@ export default function SurveyAnalysisDetailPage() {
           overallNeutral++;
           break;
       }
-    }
-    if (response.themes) {
-      response.themes.forEach((theme: string) => {
-        themeCounts[theme] = (themeCounts[theme] || 0) + 1;
-      });
     }
   });
   
@@ -387,8 +388,14 @@ export default function SurveyAnalysisDetailPage() {
                 <Tag className="h-6 w-6 text-purple-600" />
                 <div>
                   <div className="text-lg font-bold text-gray-900">
-                    {crossQuestionThemes.slice(0, 3).join(', ')}
-                    {crossQuestionThemes.length > 3 && '...'}
+                    {crossQuestionThemes.length > 0 ? (
+                      <>
+                        {crossQuestionThemes.slice(0, 3).join(', ')}
+                        {crossQuestionThemes.length > 3 && '...'}
+                      </>
+                    ) : (
+                      'No themes identified'
+                    )}
                   </div>
                   <div className="text-sm text-gray-600">Cross-Question Themes</div>
                 </div>
