@@ -181,7 +181,9 @@ Return JSON format:
         .from('survey_insights')
         .insert({
           survey_id: surveyId,
-          insight_type: insight.type,
+          insight_type: insight.type === 'problem' ? 'theme' : 
+                       insight.type === 'success' ? 'theme' : 
+                       insight.type,
           title: insight.title || insight.type,
           description: insight.content,
           priority: Math.round((insight.impact || 0.5) * 10),
