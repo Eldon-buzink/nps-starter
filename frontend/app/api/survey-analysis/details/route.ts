@@ -69,7 +69,10 @@ export async function GET(request: Request) {
       survey_name: surveyData.name,
       total_responses: surveyData.total_responses,
       upload_date: surveyData.created_at,
-      status: surveyData.status
+      status: surveyData.status,
+      is_multi_question: surveyData.is_multi_question || false,
+      question_columns: surveyData.question_columns || [],
+      headers: surveyData.headers || []
     };
 
     // Deduplicate themes with the same name (in case the survey was reprocessed)
@@ -123,7 +126,8 @@ export async function GET(request: Request) {
         response_text: response.response_text,
         sentiment_score: aiAnalysis.sentiment_score || 0.5,
         sentiment_label: aiAnalysis.sentiment || 'neutral',
-        themes: aiAnalysis.themes || []
+        themes: aiAnalysis.themes || [],
+        question_text: response.question_text || null
       };
     });
 
