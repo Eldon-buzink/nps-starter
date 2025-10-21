@@ -465,18 +465,47 @@ export default function SurveyAnalysisDetailPage() {
                 const positivePercentage = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
                 const negativePercentage = totalResponses > 0 ? Math.round((negativeCount / totalResponses) * 100) : 0;
                 
-                // Generate main insight for this question
+                // Generate concrete insight based on actual response analysis
                 const getMainInsight = () => {
-                  if (positivePercentage >= 70) {
-                    return `Strongly positive feedback (${positivePercentage}% positive responses)`;
-                  } else if (negativePercentage >= 50) {
-                    return `Significant concerns identified (${negativePercentage}% negative responses)`;
-                  } else if (positivePercentage > negativePercentage) {
-                    return `Generally positive with some concerns (${positivePercentage}% positive vs ${negativePercentage}% negative)`;
-                  } else if (negativePercentage > positivePercentage) {
-                    return `Mixed feedback with concerns (${negativePercentage}% negative vs ${positivePercentage}% positive)`;
+                  // Analyze the most common themes for this question
+                  const topThemes = questionThemes.slice(0, 3);
+                  const topThemeNames = topThemes.map(t => t.theme_name);
+                  
+                  // Get sample positive and negative responses for analysis
+                  const positiveResponses = questionResponses.filter(r => r.sentiment_label === 'positive');
+                  const negativeResponses = questionResponses.filter(r => r.sentiment_label === 'negative');
+                  
+                  // Analyze common words/phrases in responses dynamically
+                  const allResponseText = questionResponses.map(r => r.response_text.toLowerCase()).join(' ');
+                  
+                  // Extract meaningful words (3+ characters, not common stop words)
+                  const stopWords = ['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'put', 'say', 'she', 'too', 'use'];
+                  const words = allResponseText.split(/\s+/)
+                    .filter(word => word.length >= 3 && !stopWords.includes(word))
+                    .reduce((acc, word) => {
+                      acc[word] = (acc[word] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+                  
+                  const topWords = Object.entries(words)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5)
+                    .map(([word]) => word);
+                  
+                  // Generate concrete insights based on patterns
+                  if (positivePercentage >= 70 && topThemes.length > 0) {
+                    return `Customers consistently praise ${topThemeNames[0]}${topThemeNames.length > 1 ? ` and ${topThemeNames[1]}` : ''}. Key strengths include ${topWords.slice(0, 2).join(' and ')}.`;
+                  } else if (negativePercentage >= 50 && topThemes.length > 0) {
+                    return `Critical issues identified with ${topThemeNames[0]}${topThemeNames.length > 1 ? ` and ${topThemeNames[1]}` : ''}. Main concerns: ${topWords.slice(0, 2).join(', ')}.`;
+                  } else if (topThemes.length > 0) {
+                    const dominantTheme = topThemes[0].theme_name;
+                    if (positivePercentage > negativePercentage) {
+                      return `Mixed feedback with ${dominantTheme} as the main topic. Positive aspects around ${topWords.slice(0, 1).join(', ')}, but concerns about ${topWords.slice(1, 2).join(', ')}.`;
+                    } else {
+                      return `Complex feedback pattern: ${dominantTheme} dominates discussions. Issues with ${topWords.slice(0, 2).join(' and ')}, but some positive mentions of ${topWords.slice(2, 3).join(', ')}.`;
+                    }
                   } else {
-                    return `Balanced feedback (${positivePercentage}% positive, ${negativePercentage}% negative)`;
+                    return `Diverse feedback with no clear dominant themes. Responses cover ${topWords.slice(0, 3).join(', ')}.`;
                   }
                 };
 
@@ -600,16 +629,39 @@ export default function SurveyAnalysisDetailPage() {
                       <div>
                         <h4 className="text-sm font-medium text-blue-900 mb-1">Key Insight</h4>
                         <p className="text-sm text-blue-800">
-                          {positivePercentage >= 70 
-                            ? `Strongly positive feedback (${positivePercentage}% positive responses)`
-                            : negativePercentage >= 50
-                            ? `Significant concerns identified (${negativePercentage}% negative responses)`
-                            : positivePercentage > negativePercentage
-                            ? `Generally positive with some concerns (${positivePercentage}% positive vs ${negativePercentage}% negative)`
-                            : negativePercentage > positivePercentage
-                            ? `Mixed feedback with concerns (${negativePercentage}% negative vs ${positivePercentage}% positive)`
-                            : `Balanced feedback (${positivePercentage}% positive, ${negativePercentage}% negative)`
-                          }
+                          {(() => {
+                            // Analyze actual response content for single-question surveys
+                            const allResponseText = sampleResponses.map(r => r.response_text.toLowerCase()).join(' ');
+                            const stopWords = ['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'put', 'say', 'she', 'too', 'use'];
+                            const words = allResponseText.split(/\s+/)
+                              .filter(word => word.length >= 3 && !stopWords.includes(word))
+                              .reduce((acc, word) => {
+                                acc[word] = (acc[word] || 0) + 1;
+                                return acc;
+                              }, {} as Record<string, number>);
+                            
+                            const topWords = Object.entries(words)
+                              .sort(([,a], [,b]) => b - a)
+                              .slice(0, 4)
+                              .map(([word]) => word);
+
+                            const topThemes = themes.slice(0, 2).map(t => t.theme_name);
+                            
+                            if (positivePercentage >= 70 && topThemes.length > 0) {
+                              return `Customers consistently praise ${topThemes[0]}${topThemes.length > 1 ? ` and ${topThemes[1]}` : ''}. Key strengths include ${topWords.slice(0, 2).join(' and ')}.`;
+                            } else if (negativePercentage >= 50 && topThemes.length > 0) {
+                              return `Critical issues identified with ${topThemes[0]}${topThemes.length > 1 ? ` and ${topThemes[1]}` : ''}. Main concerns: ${topWords.slice(0, 2).join(', ')}.`;
+                            } else if (topThemes.length > 0) {
+                              const dominantTheme = topThemes[0];
+                              if (positivePercentage > negativePercentage) {
+                                return `Mixed feedback with ${dominantTheme} as the main topic. Positive aspects around ${topWords.slice(0, 1).join(', ')}, but concerns about ${topWords.slice(1, 2).join(', ')}.`;
+                              } else {
+                                return `Complex feedback pattern: ${dominantTheme} dominates discussions. Issues with ${topWords.slice(0, 2).join(' and ')}, but some positive mentions of ${topWords.slice(2, 3).join(', ')}.`;
+                              }
+                            } else {
+                              return `Diverse feedback with no clear dominant themes. Responses cover ${topWords.slice(0, 3).join(', ')}.`;
+                            }
+                          })()}
                         </p>
                       </div>
                     </div>
