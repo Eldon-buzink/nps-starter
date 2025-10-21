@@ -362,13 +362,17 @@ export default function SurveyAnalysisDetailPage() {
 
       {/* Key Insights & Recommendations */}
       <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <Lightbulb className="h-6 w-6 text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Key Insights & Recommendations</h2>
+        </div>
         
         {survey.is_multi_question ? (
           <MultiQuestionInsights insights={insights} survey={survey} />
         ) : (
           <div className="grid gap-6">
             {insights.map((insight) => (
-              <Card key={insight.id} className="border-l-4 border-l-blue-500">
+              <Card key={insight.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-blue-600" />
@@ -378,7 +382,7 @@ export default function SurveyAnalysisDetailPage() {
                 <CardContent>
                   {/* Special handling for Team Action Plan to parse structured content */}
                   {insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {/* Parse and display structured action plan as individual cards */}
                       {parseActionPlan(insight.description)}
                     </div>
