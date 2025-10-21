@@ -334,43 +334,52 @@ export default function SurveyAnalysisDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {/* Card 1: Total Responses & Questions */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-center space-x-3">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{totalResponses}</div>
-                  <div className="text-sm text-gray-600">across {totalQuestions} questions</div>
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-6 w-6 text-blue-600" />
+                  </div>
                 </div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">{totalResponses}</div>
+                <div className="text-sm text-gray-600">across {totalQuestions} questions</div>
               </div>
             </div>
             
             {/* Card 2: Overall Sentiment */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-center space-x-3">
-                <BarChart3 className="h-6 w-6 text-green-600" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{overallPositive} positive, {overallNegative} negative</div>
-                  <div className="text-sm text-gray-600">Overall Sentiment</div>
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-green-600" />
+                  </div>
                 </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-green-600">{overallPositive} positive</div>
+                  <div className="text-2xl font-bold text-red-600">{overallNegative} negative</div>
+                </div>
+                <div className="text-sm text-gray-600 mt-2">Overall Sentiment</div>
               </div>
             </div>
             
             {/* Card 3: Top Cross-Question Themes */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-center space-x-3">
-                <Tag className="h-6 w-6 text-purple-600" />
-                <div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {crossQuestionThemes.length > 0 ? (
-                      <>
-                        {crossQuestionThemes.slice(0, 3).join(', ')}
-                        {crossQuestionThemes.length > 3 && '...'}
-                      </>
-                    ) : (
-                      'No themes identified'
-                    )}
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Tag className="h-6 w-6 text-purple-600" />
                   </div>
-                  <div className="text-sm text-gray-600">Cross-Question Themes</div>
                 </div>
+                <div className="text-lg font-bold text-gray-900 mb-2">
+                  {crossQuestionThemes.length > 0 ? (
+                    <>
+                      {crossQuestionThemes.slice(0, 3).join(', ')}
+                      {crossQuestionThemes.length > 3 && '...'}
+                    </>
+                  ) : (
+                    'No themes identified'
+                  )}
+                </div>
+                <div className="text-sm text-gray-600">Cross-Question Themes</div>
               </div>
             </div>
           </div>
@@ -498,32 +507,38 @@ export default function SurveyAnalysisDetailPage() {
           </div>
         ) : (
           <div className="grid gap-6">
-            {insights.map((insight) => (
-              insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
-                // Special handling for Team Action Plan - no card wrapper, just the action items
-                <div key={insight.id} className="space-y-4">
-                  {parseActionPlan(insight.description)}
-                </div>
-              ) : (
-                <Card key={insight.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Brain className="h-5 w-5 text-blue-600" />
-                      {insight.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      {insight.description.split('\n').map((line, index) => (
-                        <p key={index} className="mb-2 last:mb-0">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+            {insights
+              .filter(insight => 
+                !insight.title.includes('Customer Satisfaction Overview') && 
+                !insight.title.includes('Overall Survey Analysis') &&
+                !insight.title.includes('Multi-Question Survey Analysis')
               )
-            ))}
+              .map((insight) => (
+                insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
+                  // Special handling for Team Action Plan - no card wrapper, just the action items
+                  <div key={insight.id} className="space-y-4">
+                    {parseActionPlan(insight.description)}
+                  </div>
+                ) : (
+                  <Card key={insight.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-blue-600" />
+                        {insight.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="prose prose-sm max-w-none">
+                        {insight.description.split('\n').map((line, index) => (
+                          <p key={index} className="mb-2 last:mb-0">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              ))}
           </div>
         )}
       </div>
