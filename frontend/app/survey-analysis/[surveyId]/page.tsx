@@ -115,6 +115,15 @@ export default function SurveyAnalysisDetailPage() {
 
   const { survey, themes, insights, sampleResponses } = analysisData;
   
+  // Debug logging
+  console.log('Survey data:', {
+    is_multi_question: survey.is_multi_question,
+    question_columns: survey.question_columns,
+    total_responses: survey.total_responses,
+    sample_responses_count: sampleResponses.length,
+    first_response: sampleResponses[0]
+  });
+  
   // Calculate overall sentiment and cross-question themes
   const totalResponses = survey.total_responses;
   const totalQuestions = survey.question_columns?.length || (survey.is_multi_question ? 4 : 1); // Default to 4 for multi-question, 1 for single
@@ -154,6 +163,19 @@ export default function SurveyAnalysisDetailPage() {
     .map(([theme]) => theme);
   
   const crossQuestionThemes = sortedThemes.slice(0, 5); // Top 5 most frequent themes
+
+  // Group responses by question for multi-question analysis
+  const questionGroups: { [key: string]: any[] } = {};
+  if (survey.is_multi_question && sampleResponses.length > 0) {
+    sampleResponses.forEach(response => {
+      if (response.question_text) {
+        if (!questionGroups[response.question_text]) {
+          questionGroups[response.question_text] = [];
+        }
+        questionGroups[response.question_text].push(response);
+      }
+    });
+  }
 
   // Multi-question insights component
   const MultiQuestionInsights = ({ insights, survey }: { insights: any[], survey: any }) => {
