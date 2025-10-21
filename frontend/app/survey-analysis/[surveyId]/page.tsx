@@ -392,29 +392,32 @@ export default function SurveyAnalysisDetailPage() {
               );
               
               return (
-                <Card key={questionText} className="border border-gray-200 shadow-sm">
-                  <CardHeader className="pb-4">
+                <Card key={questionText} className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-4 border-b border-gray-100">
                     <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <MessageSquare className="h-4 w-4 text-blue-600" />
                       </div>
-                      {questionText}
+                      {questionText.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-6 pt-6">
                     {/* Sentiment Overview */}
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                         <div className="text-2xl font-bold text-green-600">{positiveCount}</div>
-                        <div className="text-sm text-green-700">Positive ({positivePercentage.toFixed(0)}%)</div>
+                        <div className="text-sm text-green-700 font-medium">Positive</div>
+                        <div className="text-xs text-green-600">{positivePercentage.toFixed(0)}%</div>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                      <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
                         <div className="text-2xl font-bold text-red-600">{negativeCount}</div>
-                        <div className="text-sm text-red-700">Negative ({negativePercentage.toFixed(0)}%)</div>
+                        <div className="text-sm text-red-700 font-medium">Negative</div>
+                        <div className="text-xs text-red-600">{negativePercentage.toFixed(0)}%</div>
                       </div>
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="text-2xl font-bold text-gray-600">{neutralCount}</div>
-                        <div className="text-sm text-gray-700">Neutral</div>
+                        <div className="text-sm text-gray-700 font-medium">Neutral</div>
+                        <div className="text-xs text-gray-600">{((neutralCount / totalResponses) * 100).toFixed(0)}%</div>
                       </div>
                     </div>
                     
@@ -427,7 +430,7 @@ export default function SurveyAnalysisDetailPage() {
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {questionThemes.slice(0, 5).map(theme => (
-                            <Badge key={theme.id} variant="secondary" className="text-sm">
+                            <Badge key={theme.id} variant="secondary" className="text-sm bg-blue-50 text-blue-700 border border-blue-200">
                               {theme.theme_name}
                             </Badge>
                           ))}
@@ -441,11 +444,11 @@ export default function SurveyAnalysisDetailPage() {
                         <MessageSquare className="h-4 w-4 text-blue-600" />
                         Sample Feedback
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {questionResponses.slice(0, 3).map(response => (
-                          <div key={response.id} className="p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-700 italic">"{response.response_text}"</p>
-                            <div className="flex items-center justify-between mt-2">
+                          <div key={response.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-700 italic mb-2">"{response.response_text}"</p>
+                            <div className="flex items-center justify-between">
                               <Badge variant={response.sentiment_label === 'positive' ? 'success' : response.sentiment_label === 'negative' ? 'destructive' : 'secondary'}>
                                 {response.sentiment_label}
                               </Badge>
