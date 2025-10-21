@@ -63,7 +63,10 @@ export async function POST(request: NextRequest) {
               role: "system",
               content: `Analyze this survey response and extract:
 1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
-2. Main themes (2-3 key themes that capture the main topics discussed)
+2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words. For example:
+   - If someone says "shipping was too expensive for a small item" → theme should be "shipping cost" or "delivery pricing", not "small item"
+   - If someone says "love the new interface" → theme should be "user interface" or "usability", not "new"
+   - If someone says "customer support was amazing" → theme should be "customer service" or "support quality"
 
 Return JSON format:
 {
@@ -304,6 +307,31 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     });
   }
 
+  // Insight 2: What Customers Love (if there are positive responses)
+  if (positiveCount > 0) {
+    const positiveThemes = Array.from(themeSeverityScores.entries())
+      .filter(([_, data]) => data.responses.some(r => r.sentiment_label === 'positive'))
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 3);
+
+    if (positiveThemes.length > 0) {
+      const topPositiveTheme = positiveThemes[0];
+      const positiveQuotes = topPositiveTheme[1].responses
+        .filter(r => r.sentiment_label === 'positive')
+        .slice(0, 2)
+        .map(r => r.response_text?.substring(0, 150) + '...')
+        .filter(Boolean);
+
+      insights.push({
+        type: 'summary',
+        title: 'What Customers Love',
+        content: `**Top Positive Theme:** ${topPositiveTheme[0]} (${topPositiveTheme[1].count} mentions)\n\n**Customer Feedback:**\n${positiveQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** This is what customers appreciate most about your product/service. Consider highlighting these strengths in marketing and ensuring they remain consistent.`,
+        themes: [topPositiveTheme[0]],
+        impact: 0.7
+      });
+    }
+  }
+
   // Generate insights for all themes (no thresholds)
   const maxInsights = Math.min(5, sortedThemes.length); // Show top 5 by default
   const usedQuotes = new Set(); // Track used quotes to avoid duplicates
@@ -374,10 +402,14 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
         actionPlan += `• Issue reported: "${negativeFeedback}"\n`;
       }
       
-      if (negativeCount > 0) {
+      if (negativeCount > 0 && positiveCount > 0) {
+        actionPlan += `• Action: Address the issues while maintaining the positive aspects customers love\n`;
+      } else if (negativeCount > 0) {
         actionPlan += `• Action: Address the issues mentioned above\n`;
+      } else if (positiveCount > 0) {
+        actionPlan += `• Action: Continue and amplify what customers love - consider featuring this in marketing\n`;
       } else {
-        actionPlan += `• Action: Continue current approach - customers are happy\n`;
+        actionPlan += `• Action: Monitor this theme for future feedback\n`;
       }
       
       actionPlan += `\n`;
