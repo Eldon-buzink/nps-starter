@@ -114,6 +114,45 @@ export default function SurveyAnalysisDetailPage() {
   }
 
   const { survey, themes, insights, sampleResponses } = analysisData;
+  
+  // Calculate overall sentiment and cross-question themes
+  const totalResponses = survey.total_responses;
+  const totalQuestions = survey.question_columns?.length || 0;
+  
+  let overallPositive = 0;
+  let overallNegative = 0;
+  let overallNeutral = 0;
+  const themeCounts: { [key: string]: number } = {};
+  
+  sampleResponses.forEach(response => {
+    if (response.sentiment_label) {
+      switch (response.sentiment_label) {
+        case 'positive':
+          overallPositive++;
+          break;
+        case 'negative':
+          overallNegative++;
+          break;
+        case 'neutral':
+          overallNeutral++;
+          break;
+      }
+    }
+    if (response.themes) {
+      response.themes.forEach((theme: string) => {
+        themeCounts[theme] = (themeCounts[theme] || 0) + 1;
+      });
+    }
+  });
+  
+  const totalAnalyzedSentiment = overallPositive + overallNegative + overallNeutral;
+  const positivePercentage = totalAnalyzedSentiment > 0 ? Math.round((overallPositive / totalAnalyzedSentiment) * 100) : 0;
+  
+  const sortedThemes = Object.entries(themeCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .map(([theme]) => theme);
+  
+  const crossQuestionThemes = sortedThemes.slice(0, 5); // Top 5 most frequent themes
 
   // Multi-question insights component
   const MultiQuestionInsights = ({ insights, survey }: { insights: any[], survey: any }) => {
@@ -320,36 +359,52 @@ export default function SurveyAnalysisDetailPage() {
           
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Card 1: Total Responses & Questions */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
               <div className="flex items-center justify-center space-x-3">
                 <MessageSquare className="h-6 w-6 text-blue-600" />
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{survey.total_responses}</div>
-                  <div className="text-sm text-gray-600">Responses Analyzed</div>
+                  <div className="text-2xl font-bold text-gray-900">{totalResponses}</div>
+                  <div className="text-sm text-gray-600">across {totalQuestions} questions</div>
                 </div>
               </div>
             </div>
             
+            {/* Card 2: Overall Sentiment */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
               <div className="flex items-center justify-center space-x-3">
-                <Tag className="h-6 w-6 text-green-600" />
+                <BarChart3 className="h-6 w-6 text-green-600" />
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{themes.length}</div>
-                  <div className="text-sm text-gray-600">Themes Identified</div>
+                  <div className="text-2xl font-bold text-gray-900">{overallPositive} positive, {overallNegative} negative</div>
+                  <div className="text-sm text-gray-600">Overall Sentiment</div>
                 </div>
               </div>
             </div>
             
+            {/* Card 3: Top Cross-Question Themes */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
               <div className="flex items-center justify-center space-x-3">
-                <Lightbulb className="h-6 w-6 text-purple-600" />
+                <Tag className="h-6 w-6 text-purple-600" />
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{insights.length}</div>
-                  <div className="text-sm text-gray-600">Insights Generated</div>
+                  <div className="text-lg font-bold text-gray-900">
+                    {crossQuestionThemes.slice(0, 3).join(', ')}
+                    {crossQuestionThemes.length > 3 && '...'}
+                  </div>
+                  <div className="text-sm text-gray-600">Cross-Question Themes</div>
                 </div>
               </div>
             </div>
           </div>
+          
+          {/* Overall Sentiment Summary Text */}
+          {totalAnalyzedSentiment > 0 && (
+            <div className="text-center mt-6">
+              <p className="text-lg text-gray-700">
+                <span className="font-semibold text-green-600">{positivePercentage}%</span> of customers are satisfied ({overallPositive}/{totalResponses} positive responses).{' '}
+                <span className="font-semibold text-red-600">{overallNegative}</span> customers reported issues that need attention.
+              </p>
+            </div>
+          )}
           
           {/* Status Badge */}
           <div className="flex justify-center">
@@ -556,4 +611,5 @@ export default function SurveyAnalysisDetailPage() {
       </div>
     </div>
   );
+}
 }
