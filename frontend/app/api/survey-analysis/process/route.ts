@@ -372,31 +372,55 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
       actionPlan += `• Mentioned by ${data.count} customers (${positiveCount} positive, ${negativeCount} negative)\n`;
       actionPlan += `• Severity score: ${data.severityScore.toFixed(2)} (${Math.round(data.negativeShare * 100)}% negative)\n`;
       
-      // Show both positive and negative feedback together
+      // Show both positive and negative feedback together with more examples
       if (positiveFeedback && negativeFeedback) {
         actionPlan += `• What customers love: "${positiveFeedback}"\n`;
         actionPlan += `• Issues to address: "${negativeFeedback}"\n`;
       } else if (positiveFeedback) {
         actionPlan += `• What customers love: "${positiveFeedback}"\n`;
+        // Show additional positive examples if available
+        const additionalPositive = data.responses
+          .filter(r => r.sentiment_label === 'positive')
+          .slice(1, 2)
+          .map(r => r.response_text?.substring(0, 150) + '...')
+          .filter(Boolean);
+        if (additionalPositive.length > 0) {
+          actionPlan += `• Additional positive feedback: "${additionalPositive[0]}"\n`;
+        }
       } else if (negativeFeedback) {
         actionPlan += `• Issues to address: "${negativeFeedback}"\n`;
+        // Show additional negative examples if available
+        const additionalNegative = data.responses
+          .filter(r => r.sentiment_label === 'negative')
+          .slice(1, 2)
+          .map(r => r.response_text?.substring(0, 150) + '...')
+          .filter(Boolean);
+        if (additionalNegative.length > 0) {
+          actionPlan += `• Additional issues: "${additionalNegative[0]}"\n`;
+        }
       }
       
-      // Generate specific action recommendations based on theme and feedback
+      // Generate specific action recommendations based on theme and feedback content
       let action = '';
       if (negativeCount > 0 && positiveCount > 0) {
-        action = `Address the issues while maintaining the positive aspects customers love`;
+        // Mixed feedback - be specific about what to maintain and what to fix
+        if (positiveFeedback && negativeFeedback) {
+          action = `Maintain: ${positiveFeedback.substring(0, 50)}... | Fix: ${negativeFeedback.substring(0, 50)}...`;
+        } else {
+          action = `Address the issues while maintaining the positive aspects customers love`;
+        }
       } else if (negativeCount > 0) {
-        // Theme-specific negative actions
-        if (theme.toLowerCase().includes('shipping') || theme.toLowerCase().includes('delivery')) {
+        // Theme-specific negative actions with better matching
+        const themeLower = theme.toLowerCase();
+        if (themeLower.includes('shipping') || themeLower.includes('delivery') || themeLower.includes('shipping cost') || themeLower.includes('delivery pricing')) {
           action = `Review shipping costs and delivery options - consider free shipping thresholds or alternative carriers`;
-        } else if (theme.toLowerCase().includes('pricing') || theme.toLowerCase().includes('cost')) {
+        } else if (themeLower.includes('pricing') || themeLower.includes('cost') || themeLower.includes('price')) {
           action = `Analyze pricing strategy and competitor positioning - consider value-based pricing or discounts`;
-        } else if (theme.toLowerCase().includes('quality') || theme.toLowerCase().includes('product')) {
+        } else if (themeLower.includes('quality') || themeLower.includes('product') || themeLower.includes('product quality')) {
           action = `Investigate quality control processes and customer expectations - review manufacturing standards`;
-        } else if (theme.toLowerCase().includes('support') || theme.toLowerCase().includes('service')) {
+        } else if (themeLower.includes('support') || themeLower.includes('service') || themeLower.includes('customer service') || themeLower.includes('support quality')) {
           action = `Enhance customer service training and response times - consider additional support channels`;
-        } else if (theme.toLowerCase().includes('interface') || theme.toLowerCase().includes('usability')) {
+        } else if (themeLower.includes('interface') || themeLower.includes('usability') || themeLower.includes('user interface') || themeLower.includes('navigation')) {
           action = `Conduct UX research and usability testing - prioritize user experience improvements`;
         } else {
           action = `Investigate root cause and implement targeted improvements`;
@@ -408,6 +432,15 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
       }
       
       actionPlan += `• Action: ${action}\n`;
+      
+      // Add business impact explanation
+      if (data.count >= 3) {
+        actionPlan += `• Why this matters: ${data.count} customers mentioned this - significant impact on customer satisfaction\n`;
+      } else if (data.count >= 2) {
+        actionPlan += `• Why this matters: Multiple customers mentioned this - worth investigating\n`;
+      } else {
+        actionPlan += `• Why this matters: Early signal - monitor for trends\n`;
+      }
       
       actionPlan += `\n`;
     });
