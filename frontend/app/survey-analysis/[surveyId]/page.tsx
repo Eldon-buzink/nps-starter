@@ -435,11 +435,11 @@ export default function SurveyAnalysisDetailPage() {
               );
               
               return (
-                <Card key={questionText} className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50">
+                <Card key={questionText} className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                   <CardHeader className="pb-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
                           <MessageSquare className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -457,14 +457,14 @@ export default function SurveyAnalysisDetailPage() {
                   </CardHeader>
                   
                   <CardContent className="space-y-6">
-                    {/* Sentiment Overview with Visual Indicators */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-100">
+                    {/* Sentiment Overview */}
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                       <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <BarChart3 className="h-5 w-5 text-blue-600" />
                         Sentiment Breakdown
                       </h4>
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200">
+                        <div className="text-center p-4 bg-green-50 rounded-lg border-2 border-green-200">
                           <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
                             <span className="text-white font-bold text-sm">+</span>
                           </div>
@@ -472,7 +472,7 @@ export default function SurveyAnalysisDetailPage() {
                           <div className="text-sm text-green-700 font-medium">Positive</div>
                           <div className="text-xs text-green-600 font-semibold">{positivePercentage.toFixed(0)}%</div>
                         </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border-2 border-red-200">
+                        <div className="text-center p-4 bg-red-50 rounded-lg border-2 border-red-200">
                           <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
                             <span className="text-white font-bold text-sm">-</span>
                           </div>
@@ -480,7 +480,7 @@ export default function SurveyAnalysisDetailPage() {
                           <div className="text-sm text-red-700 font-medium">Negative</div>
                           <div className="text-xs text-red-600 font-semibold">{negativePercentage.toFixed(0)}%</div>
                         </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-200">
+                        <div className="text-center p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
                           <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-2">
                             <span className="text-white font-bold text-sm">~</span>
                           </div>
@@ -491,17 +491,17 @@ export default function SurveyAnalysisDetailPage() {
                       </div>
                     </div>
                     
-                    {/* Key Themes with Visual Enhancement */}
+                    {/* Key Themes */}
                     {questionThemes.length > 0 && (
-                      <div className="bg-white rounded-xl p-6 border border-gray-100">
+                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                         <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                           <Tag className="h-5 w-5 text-purple-600" />
                           Key Themes Identified
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           {questionThemes.slice(0, 6).map((theme, index) => (
-                            <div key={theme.id} className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                            <div key={theme.id} className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                              <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
                                 <span className="text-white font-bold text-xs">{index + 1}</span>
                               </div>
                               <span className="text-sm font-medium text-gray-800">{theme.theme_name}</span>
@@ -511,8 +511,8 @@ export default function SurveyAnalysisDetailPage() {
                       </div>
                     )}
                     
-                    {/* Sample Feedback with Better Design */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-100">
+                    {/* Sample Feedback */}
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                       <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <MessageSquare className="h-5 w-5 text-orange-600" />
                         Sample Feedback
