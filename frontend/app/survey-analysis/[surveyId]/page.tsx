@@ -683,7 +683,8 @@ export default function SurveyAnalysisDetailPage() {
               .filter(insight => 
                 !insight.title.includes('Customer Satisfaction Overview') && 
                 !insight.title.includes('Overall Survey Analysis') &&
-                !insight.title.includes('Multi-Question Survey Analysis')
+                !insight.title.includes('Multi-Question Survey Analysis') &&
+                !insight.title.includes('Question Analysis:')
               )
               .map((insight) => (
                 insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
