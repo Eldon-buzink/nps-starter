@@ -76,9 +76,16 @@ export default function SurveyAnalysisDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-lg text-muted-foreground">Loading survey analysis...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Loading Survey Analysis</h2>
+              <p className="text-muted-foreground">Preparing your insights and recommendations...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
