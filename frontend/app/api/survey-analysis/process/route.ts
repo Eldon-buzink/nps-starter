@@ -105,11 +105,26 @@ Return JSON format:
         if (analysis.themes) {
           for (const theme of analysis.themes) {
             if (!themes.has(theme)) {
-              themes.set(theme, { count: 0, responses: [] });
+              themes.set(theme, { 
+                count: 0, 
+                responses: [], 
+                negativeCount: 0,
+                avgSentiment: 0,
+                sentimentSum: 0
+              });
             }
             const themeData = themes.get(theme)!;
             themeData.count++;
-            themeData.responses.push(response);
+            themeData.responses.push(updatedResponse);
+            
+            // Track negative sentiment
+            if (updatedResponse.sentiment_label === 'negative') {
+              themeData.negativeCount++;
+            }
+            
+            // Track sentiment for averaging
+            themeData.sentimentSum += updatedResponse.sentiment_score;
+            themeData.avgSentiment = themeData.sentimentSum / themeData.count;
           }
         }
 
@@ -291,6 +306,8 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
 
   // Generate insights for all themes (no thresholds)
   const maxInsights = Math.min(5, sortedThemes.length); // Show top 5 by default
+  const usedQuotes = new Set(); // Track used quotes to avoid duplicates
+  
   for (let i = 0; i < maxInsights; i++) {
     const [theme, data] = sortedThemes[i];
     const evidenceCount = Math.min(
@@ -298,19 +315,27 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
       data.responses.length
     );
     
+    // Get unique quotes that haven't been used yet
     const sampleQuotes = data.responses
-      .slice(0, evidenceCount)
       .map(r => r.response_text?.substring(0, 150) + '...')
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(quote => !usedQuotes.has(quote))
+      .slice(0, evidenceCount);
+    
+    // Mark quotes as used
+    sampleQuotes.forEach(quote => usedQuotes.add(quote));
 
-    const whyItMatters = data.negativeShare > 0.5 
-      ? `High negative share (${Math.round(data.negativeShare * 100)}%) despite ${data.count} mentions.`
-      : `Moderate volume (${data.count} mentions) with ${Math.round(data.negativeShare * 100)}% negative sentiment.`;
+    const negativeShare = data.negativeCount / data.count;
+    const sentimentPercent = Math.round((data.avgSentiment || 0.5) * 100);
+    
+    const whyItMatters = negativeShare > 0.5 
+      ? `High negative share (${Math.round(negativeShare * 100)}%) despite ${data.count} mentions.`
+      : `Moderate volume (${data.count} mentions) with ${Math.round(negativeShare * 100)}% negative sentiment.`;
 
     insights.push({
       type: 'theme',
       title: `${theme.charAt(0).toUpperCase() + theme.slice(1)} Analysis`,
-      content: `**Metrics:** ${data.count} mentions, ${Math.round(data.negativeShare * 100)}% negative, ${Math.round((data.avgSentiment || 0.5) * 100)}% sentiment\n\n**Evidence:**\n${sampleQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** ${whyItMatters}`,
+      content: `**Metrics:** ${data.count} mentions, ${Math.round(negativeShare * 100)}% negative, ${sentimentPercent}% sentiment\n\n**Evidence:**\n${sampleQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** ${whyItMatters}`,
       themes: [theme],
       impact: Math.min(data.severityScore / 10, 1) // Normalize severity score to 0-1
     });
