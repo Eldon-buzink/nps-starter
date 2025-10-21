@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Process responses with AI
     const processedResponses = [];
-    const themes = new Map<string, { count: number; responses: any[]; keywords: Set<string> }>();
+    const themes = new Map<string, { count: number; responses: any[] }>();
 
     for (const response of responses) {
       try {
@@ -64,16 +64,12 @@ export async function POST(request: NextRequest) {
               content: `Analyze this survey response and extract:
 1. Sentiment (positive/negative/neutral)
 2. Main themes (2-3 key themes)
-3. Keywords (5-10 important words/phrases)
-4. NPS score if mentioned (0-10)
 
 Return JSON format:
 {
   "sentiment": "positive|negative|neutral",
   "sentiment_score": 0.8,
-  "themes": ["theme1", "theme2"],
-  "keywords": ["keyword1", "keyword2"],
-  "nps_score": 9
+  "themes": ["theme1", "theme2"]
 }`
             },
             {
@@ -103,12 +99,11 @@ Return JSON format:
         if (analysis.themes) {
           for (const theme of analysis.themes) {
             if (!themes.has(theme)) {
-              themes.set(theme, { count: 0, responses: [], keywords: new Set() });
+              themes.set(theme, { count: 0, responses: [] });
             }
             const themeData = themes.get(theme)!;
             themeData.count++;
             themeData.responses.push(response);
-            // collect up to a few sample responses per theme later
           }
         }
 
