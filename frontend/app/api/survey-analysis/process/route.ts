@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Processing ${responses.length} responses for survey ${surveyId}`);
+    console.log('Survey type:', survey.is_multi_question ? 'Multi-question' : 'Single-question');
+    console.log('Question columns:', survey.question_columns);
 
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
@@ -56,24 +58,36 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`Processing response ${response.id}: ${response.response_text.substring(0, 50)}...`);
         // Analyze with OpenAI
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `Analyze this survey response and extract:
+        const systemPrompt = survey.is_multi_question 
+          ? `Analyze this survey response and extract:
 1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
-2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words. For example:
-   - If someone says "shipping was too expensive for a small item" → theme should be "shipping cost" or "delivery pricing", not "small item"
-   - If someone says "love the new interface" → theme should be "user interface" or "usability", not "new"
-   - If someone says "customer support was amazing" → theme should be "customer service" or "support quality"
+2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words.
+3. Question context: This response is for the question "${response.question_text}". Consider this context when analyzing themes.
+
+Return JSON format:
+{
+  "sentiment": "positive|negative|neutral",
+  "sentiment_score": 0.8,
+  "themes": ["theme1", "theme2"],
+  "question_context": "${response.question_text}"
+}`
+          : `Analyze this survey response and extract:
+1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
+2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words.
 
 Return JSON format:
 {
   "sentiment": "positive|negative|neutral",
   "sentiment_score": 0.8,
   "themes": ["theme1", "theme2"]
-}`
+}`;
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
             },
             {
               role: "user",
@@ -190,7 +204,7 @@ Return JSON format:
     }
 
     // Generate insights
-    const insights = await generateInsights(processedResponses, themes);
+    const insights = await generateInsights(processedResponses, themes, survey);
     console.log(`Generated ${insights.length} insights:`, insights);
 
     // Create insight records
@@ -246,7 +260,7 @@ Return JSON format:
   }
 }
 
-async function generateInsights(responses: any[], themes: Map<string, any>) {
+async function generateInsights(responses: any[], themes: Map<string, any>, survey: any) {
   const insights = [];
   
   // Get sentiment breakdown
@@ -259,6 +273,49 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
   const positiveCount = sentimentCounts.positive || 0;
   const negativeCount = sentimentCounts.negative || 0;
   const neutralCount = sentimentCounts.neutral || 0;
+
+  // Multi-question analysis: group by question
+  if (survey.is_multi_question) {
+    const questionGroups = responses.reduce((acc, r) => {
+      const question = r.question_text || 'Unknown';
+      if (!acc[question]) {
+        acc[question] = [];
+      }
+      acc[question].push(r);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    console.log('Question groups:', Object.keys(questionGroups).map(q => `${q}: ${questionGroups[q].length} responses`));
+
+    // Generate per-question insights
+    for (const [questionText, questionResponses] of Object.entries(questionGroups)) {
+      if (questionResponses.length > 0) {
+        const questionThemes = new Map();
+        
+        // Filter themes for this question
+        for (const [themeName, themeData] of themes.entries()) {
+          const questionThemeResponses = themeData.responses.filter(r => 
+            questionResponses.some(qr => qr.id === r.id)
+          );
+          if (questionThemeResponses.length > 0) {
+            questionThemes.set(themeName, {
+              ...themeData,
+              responses: questionThemeResponses,
+              count: questionThemeResponses.length
+            });
+          }
+        }
+
+        // Generate insights for this question
+        const questionInsights = await generateQuestionInsights(questionText, questionResponses, questionThemes);
+        insights.push(...questionInsights);
+      }
+    }
+
+    // Add overall cross-question insights for multi-question surveys
+    const overallInsights = await generateOverallInsights(responses, themes, survey);
+    insights.push(...overallInsights);
+  }
 
   // Adaptive volume weight based on dataset size
   const getVolumeWeight = (mentions: number) => {
@@ -453,6 +510,85 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
       impact: 0.9
     });
   }
+
+  return insights;
+}
+
+// Generate insights for a specific question
+async function generateQuestionInsights(questionText: string, questionResponses: any[], questionThemes: Map<string, any>) {
+  const insights = [];
+  
+  // Question-specific sentiment breakdown
+  const sentimentCounts = questionResponses.reduce((acc, r) => {
+    acc[r.sentiment_label] = (acc[r.sentiment_label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalResponses = questionResponses.length;
+  const positiveCount = sentimentCounts.positive || 0;
+  const negativeCount = sentimentCounts.negative || 0;
+
+  // Question summary insight
+  insights.push({
+    type: 'summary',
+    title: `Question Analysis: ${questionText}`,
+    content: `**Question:** ${questionText}\n\n**Response Summary:** ${totalResponses} responses (${positiveCount} positive, ${negativeCount} negative)\n\n**Key Themes:** ${Array.from(questionThemes.keys()).slice(0, 3).join(', ')}`,
+    themes: Array.from(questionThemes.keys()),
+    impact: 0.7
+  });
+
+  // Top themes for this question
+  const sortedThemes = Array.from(questionThemes.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 3);
+
+  for (const [themeName, themeData] of sortedThemes) {
+    const positiveResponses = themeData.responses.filter(r => r.sentiment_label === 'positive');
+    const negativeResponses = themeData.responses.filter(r => r.sentiment_label === 'negative');
+    
+    const positiveFeedback = positiveResponses
+      .slice(0, 1)
+      .map(r => r.response_text?.substring(0, 150) + '...')
+      .join('');
+    
+    const negativeFeedback = negativeResponses
+      .slice(0, 1)
+      .map(r => r.response_text?.substring(0, 150) + '...')
+      .join('');
+
+    insights.push({
+      type: 'theme',
+      title: `${themeName} (${questionText})`,
+      content: `**Question:** ${questionText}\n\n**Theme:** ${themeName}\n**Mentions:** ${themeData.count}\n\n${positiveFeedback ? `**Positive feedback:** "${positiveFeedback}"\n\n` : ''}${negativeFeedback ? `**Issues to address:** "${negativeFeedback}"\n\n` : ''}**Why this matters:** This theme appeared ${themeData.count} times in responses to "${questionText}".`,
+      themes: [themeName],
+      impact: 0.6
+    });
+  }
+
+  return insights;
+}
+
+// Generate overall insights for multi-question surveys
+async function generateOverallInsights(responses: any[], themes: Map<string, any>, survey: any) {
+  const insights = [];
+  
+  // Overall sentiment summary
+  const sentimentCounts = responses.reduce((acc, r) => {
+    acc[r.sentiment_label] = (acc[r.sentiment_label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalResponses = responses.length;
+  const positiveCount = sentimentCounts.positive || 0;
+  const negativeCount = sentimentCounts.negative || 0;
+
+  insights.push({
+    type: 'summary',
+    title: 'Overall Survey Analysis',
+    content: `**Multi-Question Survey Analysis**\n\n**Total Responses:** ${totalResponses} across ${survey.question_columns?.length || 0} questions\n**Sentiment:** ${positiveCount} positive, ${negativeCount} negative\n\n**Cross-Question Themes:** ${Array.from(themes.keys()).slice(0, 5).join(', ')}`,
+    themes: Array.from(themes.keys()),
+    impact: 0.8
+  });
 
   return insights;
 }

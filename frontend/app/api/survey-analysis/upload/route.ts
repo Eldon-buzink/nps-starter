@@ -49,29 +49,52 @@ export async function POST(request: NextRequest) {
       return row;
     });
 
-    // Find the response column (look for common patterns)
-    const responseColumn = headers.find(header => 
+    // Detect survey structure
+    const isMultiQuestion = headers.length > 2; // More than just participant_id and one response column
+    const questionColumns = headers.filter(header => 
+      header.toLowerCase().includes('question') || 
       header.toLowerCase().includes('response') ||
-      header.toLowerCase().includes('comment') ||
       header.toLowerCase().includes('feedback') ||
-      header.toLowerCase().includes('answer') ||
-      header.toLowerCase().includes('text')
+      header.toLowerCase().includes('comment')
     );
+    
+    // If no obvious question columns, assume all columns except participant_id are questions
+    const responseColumns = questionColumns.length > 0 ? questionColumns : headers.filter(h => h !== 'participant_id');
+    
+    console.log('Survey structure detected:', {
+      isMultiQuestion,
+      totalColumns: headers.length,
+      responseColumns: responseColumns.length,
+      columns: responseColumns
+    });
 
-    if (!responseColumn) {
-      return NextResponse.json({ 
-        error: 'Could not find a response column. Please ensure your CSV has a column with open-ended responses.' 
-      }, { status: 400 });
+    // For multi-question surveys, we'll process all response columns
+    // For single-question surveys, find the main response column
+    let mainResponseColumn = responseColumns[0]; // Default to first response column
+    
+    if (!isMultiQuestion) {
+      // Single question - find the main response column
+      const singleResponseColumn = headers.find(header => 
+        header.toLowerCase().includes('response') ||
+        header.toLowerCase().includes('comment') ||
+        header.toLowerCase().includes('feedback') ||
+        header.toLowerCase().includes('answer') ||
+        header.toLowerCase().includes('text')
+      );
+      
+      if (singleResponseColumn) {
+        mainResponseColumn = singleResponseColumn;
+      }
     }
 
-    // Filter out empty responses
+    // Filter out empty responses across all response columns
     const validResponses = dataRows.filter(row => 
-      row[responseColumn] && row[responseColumn].trim().length > 10
+      responseColumns.some(col => row[col] && row[col].trim().length > 10)
     );
 
     if (validResponses.length === 0) {
       return NextResponse.json({ 
-        error: 'No valid responses found. Please ensure your response column contains meaningful text.' 
+        error: 'No valid responses found. Please ensure your response columns contain meaningful text.' 
       }, { status: 400 });
     }
 
@@ -83,8 +106,10 @@ export async function POST(request: NextRequest) {
         name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
         original_filename: file.name,
         total_responses: validResponses.length,
-        response_column: responseColumn,
+        response_column: mainResponseColumn,
         headers: headers,
+        question_columns: responseColumns,
+        is_multi_question: isMultiQuestion,
         status: 'processing'
       });
 
@@ -94,15 +119,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Store individual responses
-    const responses = validResponses.map((row, index) => ({
-      survey_id: surveyId,
-      response_id: uuidv4(), // Generate unique response ID
-      row_number: index + 2, // +2 because we skip header and start from 1
-      response_text: row[responseColumn],
-      metadata: Object.fromEntries(
-        Object.entries(row).filter(([key, value]) => key !== responseColumn && value)
-      )
-    }));
+    let responses = [];
+    
+    if (isMultiQuestion) {
+      // Multi-question: create separate response records for each question
+      validResponses.forEach((row, participantIndex) => {
+        responseColumns.forEach((questionColumn, questionIndex) => {
+          if (row[questionColumn] && row[questionColumn].trim().length > 10) {
+            responses.push({
+              survey_id: surveyId,
+              response_id: uuidv4(),
+              row_number: participantIndex + 2,
+              response_text: row[questionColumn],
+              question_text: questionColumn,
+              question_order: questionIndex,
+              participant_id: row.participant_id || `P${participantIndex + 1}`,
+              metadata: Object.fromEntries(
+                Object.entries(row).filter(([key, value]) => 
+                  !responseColumns.includes(key) && value
+                )
+              )
+            });
+          }
+        });
+      });
+    } else {
+      // Single question: original logic
+      responses = validResponses.map((row, index) => ({
+        survey_id: surveyId,
+        response_id: uuidv4(),
+        row_number: index + 2,
+        response_text: row[mainResponseColumn],
+        question_text: mainResponseColumn,
+        question_order: 0,
+        participant_id: row.participant_id || `P${index + 1}`,
+        metadata: Object.fromEntries(
+          Object.entries(row).filter(([key, value]) => key !== mainResponseColumn && value)
+        )
+      }));
+    }
 
     const { error: responsesError } = await supabase
       .from('survey_responses')
