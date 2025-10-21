@@ -169,38 +169,33 @@ export default function SurveyAnalysisDetailPage() {
         )}
 
         {/* Per-question insights */}
-        {questionInsights.length > 0 && (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-gray-900">Question-by-Question Analysis</h3>
-            <div className="grid gap-6">
-              {questionInsights.map((insight, index) => {
-                const questionName = insight.title.replace('Question Analysis: ', '');
-                const cleanName = cleanQuestionName(questionName);
-                
-                return (
-                  <Card key={index} className="border-blue-200 bg-blue-50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="text-2xl">❓</div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-lg">{cleanName}</h4>
-                            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
-                              Priority: {insight.priority}/10
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-gray-700 whitespace-pre-line">
-                            {insight.description}
-                          </div>
+        {Object.entries(questionGroups).map(([questionText, questionInsights]) => (
+          <div key={questionText} className="space-y-4">
+            <h3 className="text-xl font-semibold text-gray-900">{questionText}</h3>
+            <div className="grid gap-4">
+              {questionInsights.map((insight, index) => (
+                <Card key={index} className="border-blue-200 bg-blue-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl">❓</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{insight.title}</h4>
+                          <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                            Priority: {insight.priority}/10
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {insight.description}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
-        )}
+        ))}
       </div>
     );
   };

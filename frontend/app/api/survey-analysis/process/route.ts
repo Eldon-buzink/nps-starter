@@ -121,8 +121,15 @@ Return JSON format:
         // Aggregate themes
         if (analysis.themes) {
           for (const theme of analysis.themes) {
-            if (!themes.has(theme)) {
-              themes.set(theme, { 
+            // Clean theme name more thoroughly
+            const cleanThemeName = theme
+              .replace(/^(question_\\d+_|response_text_)/, '') // Remove prefixes
+              .replace(/_/g, ' ') // Replace underscores with spaces
+              .replace(/\b\w/g, l => l.toUpperCase()) // Capitalize first letter of each word
+              .trim();
+            
+            if (!themes.has(cleanThemeName)) {
+              themes.set(cleanThemeName, { 
                 count: 0, 
                 responses: [], 
                 negativeCount: 0,
@@ -130,7 +137,7 @@ Return JSON format:
                 sentimentSum: 0
               });
             }
-            const themeData = themes.get(theme)!;
+            const themeData = themes.get(cleanThemeName)!;
             themeData.count++;
             themeData.responses.push(updatedResponse);
             
