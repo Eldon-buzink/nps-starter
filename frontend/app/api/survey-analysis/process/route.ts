@@ -137,11 +137,7 @@ Return JSON format:
       const { error: updateError } = await supabase
         .from('survey_responses')
         .update({
-          ai_analysis: response.ai_analysis,
-          sentiment_score: response.sentiment_score,
-          sentiment_label: response.sentiment_label,
-          themes: response.themes,
-          nps_score: response.nps_score
+          ai_analysis: response.ai_analysis
         })
         .eq('id', response.id);
       
@@ -239,6 +235,38 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
   const negativeCount = sentimentCounts.negative || 0;
   const neutralCount = sentimentCounts.neutral || 0;
 
+  // Adaptive volume weight based on dataset size
+  const getVolumeWeight = (mentions: number) => {
+    if (totalResponses <= 30) {
+      return Math.sqrt(mentions); // Gentle scaling for small datasets
+    } else if (totalResponses <= 200) {
+      return Math.pow(mentions, 0.75); // Moderate scaling
+    } else {
+      return mentions; // Full weight for large datasets
+    }
+  };
+
+  // Calculate theme severity scores (no thresholds - all themes included)
+  const themeSeverityScores = new Map();
+  for (const [theme, data] of themes.entries()) {
+    const volumeWeight = getVolumeWeight(data.count);
+    const negativeShare = data.negativeCount / data.count;
+    const sentimentDistance = Math.abs(0.5 - (data.avgSentiment || 0.5)); // Distance from neutral
+    
+    const severityScore = volumeWeight * negativeShare * (1 + sentimentDistance);
+    themeSeverityScores.set(theme, {
+      ...data,
+      severityScore,
+      volumeWeight,
+      negativeShare,
+      sentimentDistance
+    });
+  }
+
+  // Sort themes by severity score (highest first)
+  const sortedThemes = Array.from(themeSeverityScores.entries())
+    .sort((a, b) => b[1].severityScore - a[1].severityScore);
+
   // Insight 1: Customer Satisfaction Overview
   const dominantSentiment = Object.entries(sentimentCounts)
     .sort((a, b) => b[1] - a[1])[0];
@@ -254,109 +282,80 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     });
   }
 
-  // Insight 2: Critical Issues Requiring Immediate Attention
-  const negativeResponses = responses.filter(r => r.sentiment_label === 'negative');
-  if (negativeResponses.length > 0) {
-    const negativeThemes = new Map();
-    negativeResponses.forEach(r => {
-      r.themes?.forEach((theme: string) => {
-        negativeThemes.set(theme, (negativeThemes.get(theme) || 0) + 1);
-      });
-    });
-
-    const topNegativeTheme = Array.from(negativeThemes.entries())
-      .sort((a, b) => b[1] - a[1])[0];
-
-    if (topNegativeTheme) {
-      const sampleNegative = negativeResponses.find(r => 
-        (r.themes || []).includes(topNegativeTheme[0])
-      )?.response_text;
-
-      insights.push({
-        type: 'problem',
-        title: 'Critical Issue Identified',
-        content: `${topNegativeTheme[1]} customers reported problems with ${topNegativeTheme[0]}. Sample feedback: "${sampleNegative}"`,
-        themes: [topNegativeTheme[0]],
-        impact: 0.9
-      });
-    }
-  }
-
-  // Insight 3: What's Working Well (Positive Themes)
-  const positiveResponses = responses.filter(r => r.sentiment_label === 'positive');
-  if (positiveResponses.length > 0) {
-    const positiveThemes = new Map();
-    positiveResponses.forEach(r => {
-      r.themes?.forEach((theme: string) => {
-        positiveThemes.set(theme, (positiveThemes.get(theme) || 0) + 1);
-      });
-    });
-
-    const topPositiveTheme = Array.from(positiveThemes.entries())
-      .sort((a, b) => b[1] - a[1])[0];
-
-    if (topPositiveTheme) {
-      const samplePositive = positiveResponses.find(r => 
-        (r.themes || []).includes(topPositiveTheme[0])
-      )?.response_text;
-
-      insights.push({
-        type: 'success',
-        title: 'What Customers Love',
-        content: `${topPositiveTheme[1]} customers praised ${topPositiveTheme[0]}. Sample feedback: "${samplePositive}"`,
-        themes: [topPositiveTheme[0]],
-        impact: 0.7
-      });
-    }
-  }
-
-  // Insight 4: Specific Actionable Recommendations
-  const topThemes = Array.from(themes.entries())
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 3);
-
-  if (topThemes.length > 0) {
-    const recThemes = topThemes.map(([name]) => name);
+  // Generate insights for all themes (no thresholds)
+  const maxInsights = Math.min(5, sortedThemes.length); // Show top 5 by default
+  for (let i = 0; i < maxInsights; i++) {
+    const [theme, data] = sortedThemes[i];
+    const evidenceCount = Math.min(
+      totalResponses <= 30 ? 1 : totalResponses <= 200 ? 2 : 3,
+      data.responses.length
+    );
     
-    // Get specific evidence for each theme
-    const evidenceMap = new Map();
-    recThemes.forEach(theme => {
-      const themeResponses = responses.filter(r => (r.themes || []).includes(theme));
-      const positive = themeResponses.filter(r => r.sentiment_label === 'positive');
-      const negative = themeResponses.filter(r => r.sentiment_label === 'negative');
+    const sampleQuotes = data.responses
+      .slice(0, evidenceCount)
+      .map(r => r.response_text?.substring(0, 150) + '...')
+      .filter(Boolean);
+
+    const whyItMatters = data.negativeShare > 0.5 
+      ? `High negative share (${Math.round(data.negativeShare * 100)}%) despite ${data.count} mentions.`
+      : `Moderate volume (${data.count} mentions) with ${Math.round(data.negativeShare * 100)}% negative sentiment.`;
+
+    insights.push({
+      type: 'theme',
+      title: `${theme.charAt(0).toUpperCase() + theme.slice(1)} Analysis`,
+      content: `**Metrics:** ${data.count} mentions, ${Math.round(data.negativeShare * 100)}% negative, ${Math.round((data.avgSentiment || 0.5) * 100)}% sentiment\n\n**Evidence:**\n${sampleQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** ${whyItMatters}`,
+      themes: [theme],
+      impact: Math.min(data.severityScore / 10, 1) // Normalize severity score to 0-1
+    });
+  }
+
+  // Generate actionable recommendations based on insights
+  if (sortedThemes.length > 0) {
+    const topThemes = sortedThemes.slice(0, 3);
+    let actionPlan = `**Based on ${totalResponses} customer responses, here are specific actions your team should take:**\n\n`;
+    
+    topThemes.forEach(([theme, data], index) => {
+      const positiveCount = data.responses.filter(r => r.sentiment_label === 'positive').length;
+      const negativeCount = data.responses.filter(r => r.sentiment_label === 'negative').length;
       
-      evidenceMap.set(theme, {
-        total: themeResponses.length,
-        positive: positive.length,
-        negative: negative.length,
-        samplePositive: positive[0]?.response_text,
-        sampleNegative: negative[0]?.response_text
-      });
-    });
+      const positiveFeedback = data.responses
+        .filter(r => r.sentiment_label === 'positive')
+        .slice(0, 1)
+        .map(r => r.response_text?.substring(0, 200))
+        .join('');
 
-    let recommendationContent = `**Based on ${totalResponses} customer responses, here are specific actions your team should take:**\n\n`;
-    
-    recThemes.forEach((theme, index) => {
-      const evidence = evidenceMap.get(theme);
-      if (evidence) {
-        recommendationContent += `**${index + 1}. ${theme.charAt(0).toUpperCase() + theme.slice(1)}**\n`;
-        recommendationContent += `• Mentioned by ${evidence.total} customers (${evidence.positive} positive, ${evidence.negative} negative)\n`;
-        
-        if (evidence.samplePositive) {
-          recommendationContent += `• Positive feedback: "${evidence.samplePositive}"\n`;
-        }
-        if (evidence.sampleNegative) {
-          recommendationContent += `• Issue reported: "${evidence.sampleNegative}"\n`;
-        }
-        recommendationContent += `• Action: ${evidence.negative > 0 ? 'Address the issues mentioned above' : 'Continue current approach - customers are happy'}\n\n`;
+      const negativeFeedback = data.responses
+        .filter(r => r.sentiment_label === 'negative')
+        .slice(0, 1)
+        .map(r => r.response_text?.substring(0, 200))
+        .join('');
+
+      actionPlan += `**${index + 1}. ${theme.charAt(0).toUpperCase() + theme.slice(1)}**\n`;
+      actionPlan += `• Mentioned by ${data.count} customers (${positiveCount} positive, ${negativeCount} negative)\n`;
+      actionPlan += `• Severity score: ${data.severityScore.toFixed(2)} (${Math.round(data.negativeShare * 100)}% negative)\n`;
+      
+      if (positiveFeedback) {
+        actionPlan += `• Positive feedback: "${positiveFeedback}"\n`;
       }
+      
+      if (negativeFeedback) {
+        actionPlan += `• Issue reported: "${negativeFeedback}"\n`;
+      }
+      
+      if (negativeCount > 0) {
+        actionPlan += `• Action: Address the issues mentioned above\n`;
+      } else {
+        actionPlan += `• Action: Continue current approach - customers are happy\n`;
+      }
+      
+      actionPlan += `\n`;
     });
 
     insights.push({
       type: 'recommendation',
       title: 'Team Action Plan',
-      content: recommendationContent,
-      themes: recThemes,
+      content: actionPlan,
+      themes: topThemes.map(([theme]) => theme),
       impact: 0.9
     });
   }
