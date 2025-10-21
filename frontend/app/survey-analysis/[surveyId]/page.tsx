@@ -117,19 +117,43 @@ export default function SurveyAnalysisDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center space-x-3">
-          <Brain className="h-8 w-8 text-purple-600" />
-          <h1 className="text-3xl font-bold">Survey Analysis: {survey.survey_name}</h1>
-        </div>
-        <p className="text-lg text-muted-foreground">
-          AI-powered insights from {survey.total_responses} responses • Uploaded {new Date(survey.upload_date).toLocaleDateString()}
-        </p>
-        <div className="flex items-center justify-center space-x-4">
-          <Badge variant="outline" className="text-green-600 border-green-600">
-            Status: {survey.status}
-          </Badge>
+      {/* Enhanced Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl p-8 mb-8">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="relative text-center space-y-6">
+          <div className="flex items-center justify-center space-x-4">
+            <div className="p-3 bg-white rounded-full shadow-lg">
+              <Brain className="h-8 w-8 text-purple-600" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Survey Analysis Results
+              </h1>
+              <p className="text-lg text-gray-600 mt-1">{survey.survey_name}</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="h-4 w-4" />
+              <span>{survey.total_responses} responses analyzed</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Tag className="h-4 w-4" />
+              <span>{themes.length} themes identified</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Lightbulb className="h-4 w-4" />
+              <span>{insights.length} insights generated</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center space-x-4">
+            <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50">
+              Status: {survey.status}
+            </Badge>
+            <span className="text-sm text-gray-500">
+              Uploaded {new Date(survey.upload_date).toLocaleDateString()}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -208,14 +232,75 @@ export default function SurveyAnalysisDetailPage() {
         </Button>
       </div>
 
-      {/* Removed large Sentiment section (now condensed above) */}
+      {/* Survey Insights - Moved above themes */}
+      {insights.length > 0 && (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">Key Insights & Recommendations</h2>
+            <p className="text-muted-foreground">Evidence-based insights for your team</p>
+          </div>
+          
+          <div className="grid gap-6">
+            {insights.map((insight, index) => {
+              const getCardStyle = (type: string) => {
+                switch (type) {
+                  case 'theme':
+                    return 'border-blue-200 bg-blue-50';
+                  case 'summary':
+                    return 'border-purple-200 bg-purple-50';
+                  case 'recommendation':
+                    return 'border-green-200 bg-green-50';
+                  default:
+                    return 'border-gray-200 bg-gray-50';
+                }
+              };
+
+              const getIcon = (type: string) => {
+                switch (type) {
+                  case 'theme':
+                    return '📊';
+                  case 'summary':
+                    return '📈';
+                  case 'recommendation':
+                    return '🎯';
+                  default:
+                    return '💡';
+                }
+              };
+
+              return (
+                <Card key={insight.id} className={`${getCardStyle(insight.insight_type)}`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl">{getIcon(insight.insight_type)}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-lg">{insight.title}</h3>
+                          <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
+                            Priority: {insight.priority}/10
+                          </Badge>
+                        </div>
+                        <div className="prose prose-sm max-w-none">
+                          <div className="whitespace-pre-line text-sm leading-relaxed">
+                            {insight.description}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Top Themes */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tag className="h-6 w-6 text-purple-600" />
-            Top Themes
+            Key Themes Identified
           </CardTitle>
           <CardDescription>Most frequently mentioned themes in your survey responses</CardDescription>
         </CardHeader>
@@ -265,83 +350,20 @@ export default function SurveyAnalysisDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Survey Insights */}
-      {insights.length > 0 && (
-        <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2">Survey Analysis Results</h2>
-            <p className="text-muted-foreground">Evidence-based insights for your team</p>
-          </div>
-          
-          <div className="grid gap-6">
-            {insights.map((insight, index) => {
-              const getCardStyle = (type: string) => {
-                switch (type) {
-                  case 'problem':
-                    return 'border-red-200 bg-red-50';
-                  case 'success':
-                    return 'border-green-200 bg-green-50';
-                  case 'recommendation':
-                    return 'border-blue-200 bg-blue-50';
-                  default:
-                    return 'border-gray-200 bg-gray-50';
-                }
-              };
-
-              const getIcon = (type: string) => {
-                switch (type) {
-                  case 'problem':
-                    return '⚠️';
-                  case 'success':
-                    return '✅';
-                  case 'recommendation':
-                    return '📋';
-                  default:
-                    return '📊';
-                }
-              };
-
-              return (
-                <Card key={insight.id} className={`${getCardStyle(insight.insight_type)}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="text-2xl">{getIcon(insight.insight_type)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-lg">{insight.title}</h3>
-                          <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
-                            Priority: {insight.priority}/10
-                          </Badge>
-                        </div>
-                        <div className="prose prose-sm max-w-none">
-                          <div className="whitespace-pre-line text-sm leading-relaxed">
-                            {insight.description}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Sample Responses */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-blue-600" />
-            Sample Responses
+            Sample Feedback
           </CardTitle>
-          <CardDescription>Examples of actual feedback from your survey</CardDescription>
+          <CardDescription>Examples of actual responses from your survey</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {sampleResponses.slice(0, 5).map((response) => (
-              <div key={response.id} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
+              <div key={response.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Badge variant={
                       response.sentiment_label === 'positive' ? 'default' :
@@ -351,11 +373,13 @@ export default function SurveyAnalysisDetailPage() {
                       {response.sentiment_label}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      Score: {response.sentiment_score.toFixed(2)}
+                      Sentiment: {response.sentiment_score.toFixed(2)}
                     </span>
                   </div>
                 </div>
-                <p className="text-sm mb-2">"{response.response_text}"</p>
+                <blockquote className="text-sm mb-3 italic text-gray-700 leading-relaxed">
+                  "{response.response_text}"
+                </blockquote>
                 {response.themes && response.themes.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {response.themes.map((theme, idx) => (
