@@ -133,9 +133,10 @@ export default function SurveyAnalysisDetailPage() {
       
       // Extract metrics, feedback, and actions
       const metrics = lines.find(line => line.includes('Mentioned by'))?.trim() || '';
-      const positiveFeedback = lines.find(line => line.includes('Positive feedback:'))?.replace('• Positive feedback: ', '').trim() || '';
-      const issueReported = lines.find(line => line.includes('Issue reported:'))?.replace('• Issue reported: ', '').trim() || '';
+      const positiveFeedback = lines.find(line => line.includes('What customers love:'))?.replace('• What customers love: ', '').trim() || '';
+      const issueReported = lines.find(line => line.includes('Issues to address:'))?.replace('• Issues to address: ', '').trim() || '';
       const action = lines.find(line => line.includes('Action:'))?.replace('• Action: ', '').trim() || '';
+      const whyMatters = lines.find(line => line.includes('Why this matters:'))?.replace('• Why this matters: ', '').trim() || '';
       
       return (
         <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -189,6 +190,18 @@ export default function SurveyAnalysisDetailPage() {
                   <div>
                     <div className="font-medium text-blue-800 text-sm mb-1">Recommended Action</div>
                     <div className="text-sm text-blue-700">{action}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {whyMatters && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-green-600 mt-0.5">💡</div>
+                  <div>
+                    <div className="font-medium text-green-800 text-sm mb-1">Why this matters</div>
+                    <div className="text-sm text-green-700">{whyMatters}</div>
                   </div>
                 </div>
               </div>
