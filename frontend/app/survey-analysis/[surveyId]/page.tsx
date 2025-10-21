@@ -9,112 +9,21 @@ import { Brain, Tag, Lightbulb, MessageSquare, Loader2, TrendingUp, TrendingDown
 import CollapsibleSurveyThemes from "@/components/CollapsibleSurveyThemes";
 import Link from 'next/link';
 
-// Multi-question insights component
-function MultiQuestionInsights({ insights, survey }: { insights: any[], survey: any }) {
-  // Group insights by question
-  const questionInsights = insights.filter(insight => 
-    insight.title.includes('Question Analysis:')
-  );
-  
-  const overallInsights = insights.filter(insight => 
-    !insight.title.includes('Question Analysis:')
-  );
-
-  // Clean up question names for display
-  const cleanQuestionName = (questionText: string) => {
-    return questionText
-      .replace('question_1_', '')
-      .replace('question_2_', '')
-      .replace('question_3_', '')
-      .replace('question_4_', '')
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  return (
-    <div className="space-y-8">
-      {/* Overall insights first */}
-      {overallInsights.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">Overall Survey Analysis</h3>
-          <div className="grid gap-4">
-            {overallInsights.map((insight, index) => (
-              <Card key={index} className="border-purple-200 bg-purple-50">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="text-2xl">📊</div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-lg">{insight.title}</h4>
-                        <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
-                          Priority: {insight.priority}/10
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-700 whitespace-pre-line">
-                        {insight.description}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Per-question insights */}
-      {questionInsights.length > 0 && (
-        <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-gray-900">Question-by-Question Analysis</h3>
-          <div className="grid gap-6">
-            {questionInsights.map((insight, index) => {
-              const questionName = insight.title.replace('Question Analysis: ', '');
-              const cleanName = cleanQuestionName(questionName);
-              
-              return (
-                <Card key={index} className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="text-2xl">❓</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-lg">{cleanName}</h4>
-                          <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
-                            Priority: {insight.priority}/10
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-700 whitespace-pre-line">
-                          {insight.description}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 interface SurveyAnalysisData {
   survey: {
     id: string;
     survey_name: string;
     total_responses: number;
     upload_date: string;
-    status: string;
-    is_multi_question?: boolean;
-    question_columns?: string[];
+    is_multi_question: boolean;
+    question_columns: string[];
   };
   themes: {
     id: string;
     theme_name: string;
     mention_count: number;
-    sentiment_score: number;
-    sample_responses: string[];
+    average_sentiment_score: number;
+    sentiment_label: string;
   }[];
   insights: {
     id: string;
@@ -205,6 +114,96 @@ export default function SurveyAnalysisDetailPage() {
   }
 
   const { survey, themes, insights, sampleResponses } = analysisData;
+
+  // Multi-question insights component
+  const MultiQuestionInsights = ({ insights, survey }: { insights: any[], survey: any }) => {
+    // Group insights by question
+    const questionInsights = insights.filter(insight => 
+      insight.title.includes('Question Analysis:')
+    );
+    
+    const overallInsights = insights.filter(insight => 
+      !insight.title.includes('Question Analysis:')
+    );
+
+    // Clean up question names for display
+    const cleanQuestionName = (questionText: string) => {
+      return questionText
+        .replace('question_1_', '')
+        .replace('question_2_', '')
+        .replace('question_3_', '')
+        .replace('question_4_', '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    return (
+      <div className="space-y-8">
+        {/* Overall insights first */}
+        {overallInsights.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold text-gray-900">Overall Survey Analysis</h3>
+            <div className="grid gap-4">
+              {overallInsights.map((insight, index) => (
+                <Card key={index} className="border-purple-200 bg-purple-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl">📊</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{insight.title}</h4>
+                          <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
+                            Priority: {insight.priority}/10
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {insight.description}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Per-question insights */}
+        {questionInsights.length > 0 && (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-gray-900">Question-by-Question Analysis</h3>
+            <div className="grid gap-6">
+              {questionInsights.map((insight, index) => {
+                const questionName = insight.title.replace('Question Analysis: ', '');
+                const cleanName = cleanQuestionName(questionName);
+                
+                return (
+                  <Card key={index} className="border-blue-200 bg-blue-50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="text-2xl">❓</div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-lg">{cleanName}</h4>
+                            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                              Priority: {insight.priority}/10
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-700 whitespace-pre-line">
+                            {insight.description}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Parse action plan content into structured components
   const parseActionPlan = (content: string) => {
@@ -312,252 +311,162 @@ export default function SurveyAnalysisDetailPage() {
         <div className="relative text-center space-y-6">
           <div className="flex items-center justify-center space-x-4">
             <div className="p-3 bg-white rounded-full shadow-lg">
-              <Brain className="h-8 w-8 text-purple-600" />
+              <Brain className="h-8 w-8 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Survey Analysis Results
               </h1>
-              <p className="text-lg text-gray-600 mt-1">{survey.survey_name}</p>
+              <p className="text-lg text-gray-600 mt-2">
+                AI-powered insights and recommendations from your survey data
+              </p>
             </div>
-          </div>
-          <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="h-4 w-4" />
-              <span>{survey.total_responses} responses analyzed</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Tag className="h-4 w-4" />
-              <span>{themes.length} themes identified</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Lightbulb className="h-4 w-4" />
-              <span>{insights.length} insights generated</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-center space-x-4">
-            <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50">
-              Status: {survey.status}
-            </Badge>
-            <span className="text-sm text-gray-500">
-              Uploaded {new Date(survey.upload_date).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards (+ Sentiment Overview condensed) */}
-      <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
-              Total Responses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-blue-600">{survey.total_responses}</p>
-            <p className="text-sm text-muted-foreground">Survey responses analyzed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-purple-600" />
-              Themes Identified
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-purple-600">{themes.length}</p>
-            <p className="text-sm text-muted-foreground">Key themes discovered</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-green-600" />
-              Insights Generated
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-green-600">{insights.length}</p>
-            <p className="text-sm text-muted-foreground">Actionable insights</p>
-          </CardContent>
-        </Card>
-        {/* Condensed Sentiment Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Sentiment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              {(['positive','neutral','negative'] as const).map((sent) => (
-                <div key={sent} className="p-2 border rounded">
-                  <div className={`text-xl font-bold ${
-                    sent === 'positive' ? 'text-green-600' : sent === 'negative' ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    {sentimentCounts[sent] || 0}
-                  </div>
-                  <div className="text-xs capitalize text-muted-foreground">{sent}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center space-x-4">
-        <Button className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Download Report
-        </Button>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Share2 className="h-4 w-4" />
-          Share Results
-        </Button>
-      </div>
-
-      {/* Survey Insights - Moved above themes */}
-      {insights.length > 0 && (
-        <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2">Key Insights & Recommendations</h2>
-            <p className="text-muted-foreground">Evidence-based insights for your team</p>
           </div>
           
-          {/* Multi-question survey layout */}
-          {survey.is_multi_question ? (
-            <MultiQuestionInsights insights={insights} survey={survey} />
-          ) : (
-            <div className="grid gap-6">
-              {insights
-                .filter(insight => insight.insight_type !== 'theme') // Remove individual theme analysis cards
-                .map((insight, index) => {
-              const getCardStyle = (type: string) => {
-                switch (type) {
-                  case 'theme':
-                    return 'border-blue-200 bg-blue-50';
-                  case 'summary':
-                    return 'border-purple-200 bg-purple-50';
-                  case 'recommendation':
-                    return 'border-green-200 bg-green-50';
-                  default:
-                    return 'border-gray-200 bg-gray-50';
-                }
-              };
-
-              const getIcon = (type: string) => {
-                switch (type) {
-                  case 'theme':
-                    return '📊';
-                  case 'summary':
-                    return '📈';
-                  case 'recommendation':
-                    return '🎯';
-                  default:
-                    return '💡';
-                }
-              };
-
-              // Special handling for Team Action Plan to parse structured content
-              if (insight.title === 'Team Action Plan' && insight.description.includes('**1.')) {
-                return (
-                  <div key={insight.id} className="space-y-6">
-                    {/* Parse and display structured action plan as individual cards */}
-                    {parseActionPlan(insight.description)}
-                  </div>
-                );
-              }
-
-              return (
-                <Card key={insight.id} className={`${getCardStyle(insight.insight_type)}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="text-2xl">{getIcon(insight.insight_type)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-lg">{insight.title}</h3>
-                          <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
-                            Priority: {insight.priority}/10
-                          </Badge>
-                        </div>
-                        <div className="prose prose-sm max-w-none">
-                          <div className="whitespace-pre-line text-sm leading-relaxed">
-                            {insight.description}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-center space-x-3">
+                <MessageSquare className="h-6 w-6 text-blue-600" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{survey.total_responses}</div>
+                  <div className="text-sm text-gray-600">Responses Analyzed</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-center space-x-3">
+                <Tag className="h-6 w-6 text-green-600" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{themes.length}</div>
+                  <div className="text-sm text-gray-600">Themes Identified</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-center space-x-3">
+                <Lightbulb className="h-6 w-6 text-purple-600" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{insights.length}</div>
+                  <div className="text-sm text-gray-600">Insights Generated</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Status Badge */}
+          <div className="flex justify-center">
+            <Badge className="bg-green-100 text-green-800 border-green-200 px-4 py-2 text-sm font-medium">
+              ✅ Analysis Complete
+            </Badge>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Top Themes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tag className="h-6 w-6 text-purple-600" />
-            Key Themes Identified
-          </CardTitle>
-          <CardDescription>Most frequently mentioned themes in your survey responses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CollapsibleSurveyThemes themes={topThemes} maxVisible={5} />
-        </CardContent>
-      </Card>
+      {/* Key Insights & Recommendations */}
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <Lightbulb className="h-6 w-6 text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Key Insights & Recommendations</h2>
+        </div>
+        
+        {survey.is_multi_question ? (
+          <MultiQuestionInsights insights={insights} survey={survey} />
+        ) : (
+          <div className="grid gap-6">
+            {insights.map((insight) => (
+              <Card key={insight.id} className="border-l-4 border-l-blue-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-blue-600" />
+                    {insight.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* Special handling for Team Action Plan to parse structured content */}
+                  {insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
+                    <div className="space-y-6">
+                      {/* Parse and display structured action plan as individual cards */}
+                      {parseActionPlan(insight.description)}
+                    </div>
+                  ) : (
+                    <div className="prose prose-sm max-w-none">
+                      {insight.description.split('\n').map((line, index) => (
+                        <p key={index} className="mb-2 last:mb-0">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Sample Responses */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-blue-600" />
-            Sample Feedback
-          </CardTitle>
-          <CardDescription>Examples of actual responses from your survey</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {sampleResponses.slice(0, 5).map((response) => (
-              <div key={response.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+      {/* Key Themes Identified */}
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <Tag className="h-6 w-6 text-green-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Key Themes Identified</h2>
+        </div>
+        
+        <CollapsibleSurveyThemes themes={themes} />
+      </div>
+
+      {/* Sample Feedback */}
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <MessageSquare className="h-6 w-6 text-orange-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Sample Feedback</h2>
+        </div>
+        
+        <div className="grid gap-4">
+          {sampleResponses.slice(0, 5).map((response, index) => (
+            <Card key={response.id} className="border-l-4 border-l-orange-500">
+              <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={
-                      response.sentiment_label === 'positive' ? 'default' :
-                      response.sentiment_label === 'negative' ? 'destructive' :
-                      'secondary'
-                    }>
+                  <div className="flex items-center space-x-2">
+                    <Badge 
+                      variant="outline" 
+                      className={`${
+                        response.sentiment_label === 'positive' 
+                          ? 'text-green-600 border-green-200 bg-green-50' 
+                          : response.sentiment_label === 'negative'
+                          ? 'text-red-600 border-red-200 bg-red-50'
+                          : 'text-gray-600 border-gray-200 bg-gray-50'
+                      }`}
+                    >
                       {response.sentiment_label}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      Sentiment: {response.sentiment_score.toFixed(2)}
-                    </span>
+                    <span className="text-sm text-gray-500">Response #{index + 1}</span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Score: {response.sentiment_score.toFixed(1)}
                   </div>
                 </div>
-                <blockquote className="text-sm mb-3 italic text-gray-700 leading-relaxed">
+                
+                <blockquote className="text-gray-700 italic mb-3">
                   "{response.response_text}"
                 </blockquote>
+                
                 {response.themes && response.themes.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {response.themes.map((theme, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs">
+                  <div className="flex flex-wrap gap-2">
+                    {response.themes.map((theme, themeIndex) => (
+                      <Badge key={themeIndex} variant="secondary" className="text-xs">
                         {theme}
                       </Badge>
                     ))}
                   </div>
                 )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
