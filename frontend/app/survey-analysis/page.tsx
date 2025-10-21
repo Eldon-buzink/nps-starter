@@ -8,8 +8,8 @@ import { SurveyUpload } from "@/components/SurveyUpload";
 
 export default function SurveyAnalysisPage() {
   const handleUploadComplete = (surveyId: string) => {
-    // Redirect to processing page first, then to results when complete
-    window.location.href = `/survey-analysis/processing/${surveyId}`;
+    // Redirect directly to results page
+    window.location.href = `/survey-analysis/${surveyId}`;
   };
 
   return (
