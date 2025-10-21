@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Brain, Tag, Lightbulb, MessageSquare, Loader2, TrendingUp, TrendingDown, Users, BarChart3, Download, Share2 } from "lucide-react";
+import CollapsibleSurveyThemes from "@/components/CollapsibleSurveyThemes";
 import Link from 'next/link';
 
 interface SurveyAnalysisData {
@@ -391,48 +392,7 @@ export default function SurveyAnalysisDetailPage() {
           <CardDescription>Most frequently mentioned themes in your survey responses</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            {topThemes.map((theme, index) => (
-              <div key={theme.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold text-sm">{theme.theme_name}</h4>
-                  <Badge variant="secondary">#{index + 1}</Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Mentions:</span>
-                    <span className="font-medium">{theme.mention_count}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Sentiment:</span>
-                    <div className="flex items-center gap-1">
-                      {theme.sentiment_score > 0.6 ? (
-                        <TrendingUp className="h-3 w-3 text-green-600" />
-                      ) : theme.sentiment_score < 0.4 ? (
-                        <TrendingDown className="h-3 w-3 text-red-600" />
-                      ) : (
-                        <div className="h-3 w-3 rounded-full bg-yellow-600" />
-                      )}
-                      <span className="font-medium">
-                        {theme.sentiment_score > 0.6 ? 'Positive' : 
-                         theme.sentiment_score < 0.4 ? 'Negative' : 'Neutral'}
-                      </span>
-                    </div>
-                  </div>
-                  {theme.sample_responses && theme.sample_responses.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      <div className="font-medium mb-1">Sample responses:</div>
-                      <div className="space-y-1">
-                        {theme.sample_responses.slice(0, 2).map((response, idx) => (
-                          <div key={idx} className="truncate italic">"{response}"</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <CollapsibleSurveyThemes themes={topThemes} maxVisible={5} />
         </CardContent>
       </Card>
 
