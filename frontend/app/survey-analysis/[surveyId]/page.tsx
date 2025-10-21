@@ -600,7 +600,7 @@ export default function SurveyAnalysisDetailPage() {
                       </div>
                       <div className="text-2xl font-bold text-red-600">{overallNegative}</div>
                       <div className="text-sm text-red-700 font-medium">Negative</div>
-                      <div className="text-xs text-red-600 font-semibold">{negativePercentage.toFixed(0)}%</div>
+                      <div className="text-xs text-red-600 font-semibold">{((overallNegative / totalAnalyzedSentiment) * 100).toFixed(0)}%</div>
                     </div>
                     <div className="text-center p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
                       <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-2">
