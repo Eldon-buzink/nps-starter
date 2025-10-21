@@ -94,8 +94,7 @@ Return JSON format:
           ai_analysis: analysis,
           sentiment_score: analysis.sentiment_score || 0,
           sentiment_label: analysis.sentiment || 'neutral',
-          themes: analysis.themes || [],
-          nps_score: analysis.nps_score || null
+          themes: analysis.themes || []
         };
 
         processedResponses.push(updatedResponse);
@@ -123,9 +122,7 @@ Return JSON format:
           ...response,
           sentiment_score: 0,
           sentiment_label: 'neutral',
-          themes: [],
-          keywords: [],
-          nps_score: null
+          themes: []
         };
         processedResponses.push(defaultResponse);
       }
