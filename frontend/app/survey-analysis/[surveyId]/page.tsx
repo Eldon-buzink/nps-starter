@@ -9,6 +9,96 @@ import { Brain, Tag, Lightbulb, MessageSquare, Loader2, TrendingUp, TrendingDown
 import CollapsibleSurveyThemes from "@/components/CollapsibleSurveyThemes";
 import Link from 'next/link';
 
+// Multi-question insights component
+function MultiQuestionInsights({ insights, survey }: { insights: any[], survey: any }) {
+  // Group insights by question
+  const questionInsights = insights.filter(insight => 
+    insight.title.includes('Question Analysis:')
+  );
+  
+  const overallInsights = insights.filter(insight => 
+    !insight.title.includes('Question Analysis:')
+  );
+
+  // Clean up question names for display
+  const cleanQuestionName = (questionText: string) => {
+    return questionText
+      .replace('question_1_', '')
+      .replace('question_2_', '')
+      .replace('question_3_', '')
+      .replace('question_4_', '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Overall insights first */}
+      {overallInsights.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">Overall Survey Analysis</h3>
+          <div className="grid gap-4">
+            {overallInsights.map((insight, index) => (
+              <Card key={index} className="border-purple-200 bg-purple-50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="text-2xl">📊</div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg">{insight.title}</h4>
+                        <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
+                          Priority: {insight.priority}/10
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-700 whitespace-pre-line">
+                        {insight.description}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Per-question insights */}
+      {questionInsights.length > 0 && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-gray-900">Question-by-Question Analysis</h3>
+          <div className="grid gap-6">
+            {questionInsights.map((insight, index) => {
+              const questionName = insight.title.replace('Question Analysis: ', '');
+              const cleanName = cleanQuestionName(questionName);
+              
+              return (
+                <Card key={index} className="border-blue-200 bg-blue-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-2xl">❓</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{cleanName}</h4>
+                          <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                            Priority: {insight.priority}/10
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {insight.description}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface SurveyAnalysisData {
   survey: {
     id: string;
@@ -16,6 +106,8 @@ interface SurveyAnalysisData {
     total_responses: number;
     upload_date: string;
     status: string;
+    is_multi_question?: boolean;
+    question_columns?: string[];
   };
   themes: {
     id: string;
@@ -337,10 +429,14 @@ export default function SurveyAnalysisDetailPage() {
             <p className="text-muted-foreground">Evidence-based insights for your team</p>
           </div>
           
-          <div className="grid gap-6">
-            {insights
-              .filter(insight => insight.insight_type !== 'theme') // Remove individual theme analysis cards
-              .map((insight, index) => {
+          {/* Multi-question survey layout */}
+          {survey.is_multi_question ? (
+            <MultiQuestionInsights insights={insights} survey={survey} />
+          ) : (
+            <div className="grid gap-6">
+              {insights
+                .filter(insight => insight.insight_type !== 'theme') // Remove individual theme analysis cards
+                .map((insight, index) => {
               const getCardStyle = (type: string) => {
                 switch (type) {
                   case 'theme':
