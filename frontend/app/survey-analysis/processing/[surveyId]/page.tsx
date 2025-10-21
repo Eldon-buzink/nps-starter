@@ -145,26 +145,35 @@ export default function SurveyProcessingPage() {
 
           {/* Status Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <Users className="h-6 w-6 mx-auto text-blue-600 mb-2" />
-              <div className="text-2xl font-bold text-blue-600">{status.survey.total_responses}</div>
+            <div className="text-center p-6 bg-blue-50 rounded-lg">
+              <div className="flex justify-center mb-3">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-blue-600 mb-1">{status.survey.total_responses}</div>
               <div className="text-sm text-muted-foreground">Responses</div>
             </div>
             
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <BarChart3 className="h-6 w-6 mx-auto text-purple-600 mb-2" />
-              <div className="text-2xl font-bold text-purple-600">{status.results.themes}</div>
+            <div className="text-center p-6 bg-purple-50 rounded-lg">
+              <div className="flex justify-center mb-3">
+                <BarChart3 className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-purple-600 mb-1">{status.results.themes}</div>
               <div className="text-sm text-muted-foreground">Themes</div>
             </div>
             
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <Lightbulb className="h-6 w-6 mx-auto text-green-600 mb-2" />
-              <div className="text-2xl font-bold text-green-600">{status.results.insights}</div>
+            <div className="text-center p-6 bg-green-50 rounded-lg">
+              <div className="flex justify-center mb-3">
+                <Lightbulb className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-600 mb-1">{status.results.insights}</div>
               <div className="text-sm text-muted-foreground">Insights</div>
             </div>
             
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{progressPercentage}%</div>
+            <div className="text-center p-6 bg-orange-50 rounded-lg">
+              <div className="flex justify-center mb-3">
+                <CheckCircle className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="text-2xl font-bold text-orange-600 mb-1">{progressPercentage}%</div>
               <div className="text-sm text-muted-foreground">Complete</div>
             </div>
           </div>
