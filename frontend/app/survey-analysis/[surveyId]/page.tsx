@@ -461,45 +461,118 @@ export default function SurveyAnalysisDetailPage() {
                   questionResponses.some(r => r.themes?.includes(theme.theme_name))
                 );
                 
+                // Calculate sentiment percentage for insights
+                const positivePercentage = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
+                const negativePercentage = totalResponses > 0 ? Math.round((negativeCount / totalResponses) * 100) : 0;
+                
+                // Generate main insight for this question
+                const getMainInsight = () => {
+                  if (positivePercentage >= 70) {
+                    return `Strongly positive feedback (${positivePercentage}% positive responses)`;
+                  } else if (negativePercentage >= 50) {
+                    return `Significant concerns identified (${negativePercentage}% negative responses)`;
+                  } else if (positivePercentage > negativePercentage) {
+                    return `Generally positive with some concerns (${positivePercentage}% positive vs ${negativePercentage}% negative)`;
+                  } else if (negativePercentage > positivePercentage) {
+                    return `Mixed feedback with concerns (${negativePercentage}% negative vs ${positivePercentage}% positive)`;
+                  } else {
+                    return `Balanced feedback (${positivePercentage}% positive, ${negativePercentage}% negative)`;
+                  }
+                };
+
                 return (
-                  <Card key={questionText} className="border border-gray-200 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-900">
+                  <Card key={questionText} className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5 text-blue-600" />
                         {questionText.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </CardTitle>
+                      <div className="text-sm text-gray-600">
+                        {totalResponses} responses analyzed
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Sentiment & Response Count */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-6">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                            <span className="text-sm font-medium text-green-700">{positiveCount} positive</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span className="text-sm font-medium text-red-700">{negativeCount} negative</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                            <span className="text-sm font-medium text-gray-700">{neutralCount} neutral</span>
+                      {/* Main Insight */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <h4 className="text-sm font-medium text-blue-900 mb-1">Key Insight</h4>
+                            <p className="text-sm text-blue-800">{getMainInsight()}</p>
                           </div>
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {totalResponses} responses
+                      </div>
+
+                      {/* Sentiment Breakdown */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-gray-700">Sentiment Breakdown</h4>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-6">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-green-700">{positiveCount} positive</span>
+                              <span className="text-xs text-gray-500">({positivePercentage}%)</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-red-700">{negativeCount} negative</span>
+                              <span className="text-xs text-gray-500">({negativePercentage}%)</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-gray-700">{neutralCount} neutral</span>
+                              <span className="text-xs text-gray-500">({Math.round(((neutralCount / totalResponses) * 100))}%)</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
                       {/* Key Themes */}
                       {questionThemes.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Key Themes:</h4>
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-gray-700">Key Themes</h4>
                           <div className="flex flex-wrap gap-2">
-                            {questionThemes.slice(0, 5).map(theme => (
-                              <Badge key={theme.id} variant="secondary" className="text-xs">
+                            {questionThemes.slice(0, 6).map(theme => (
+                              <Badge key={theme.id} variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                                 {theme.theme_name}
                               </Badge>
                             ))}
+                            {questionThemes.length > 6 && (
+                              <Badge variant="outline" className="text-xs text-gray-500">
+                                +{questionThemes.length - 6} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Response Preview */}
+                      {questionResponses.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-gray-700">Sample Response</h4>
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <p className="text-sm text-gray-700 italic">
+                              "{questionResponses[0].response_text.length > 120 
+                                ? questionResponses[0].response_text.substring(0, 120) + '...' 
+                                : questionResponses[0].response_text}"
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  questionResponses[0].sentiment_label === 'positive' 
+                                    ? 'text-green-600 border-green-200 bg-green-50' 
+                                    : questionResponses[0].sentiment_label === 'negative'
+                                    ? 'text-red-600 border-red-200 bg-red-50'
+                                    : 'text-gray-600 border-gray-200 bg-gray-50'
+                                }`}
+                              >
+                                {questionResponses[0].sentiment_label}
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                Score: {questionResponses[0].sentiment_score.toFixed(1)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -509,44 +582,109 @@ export default function SurveyAnalysisDetailPage() {
               })
             ) : (
               // Single-question: Show overall analysis
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">
+              <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-blue-600" />
                     Survey Analysis
                   </CardTitle>
+                  <div className="text-sm text-gray-600">
+                    {sampleResponses.length} responses analyzed
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Overall Sentiment & Response Count */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-green-700">{overallPositive} positive</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-red-700">{overallNegative} negative</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">{overallNeutral} neutral</span>
+                  {/* Main Insight */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-900 mb-1">Key Insight</h4>
+                        <p className="text-sm text-blue-800">
+                          {positivePercentage >= 70 
+                            ? `Strongly positive feedback (${positivePercentage}% positive responses)`
+                            : negativePercentage >= 50
+                            ? `Significant concerns identified (${negativePercentage}% negative responses)`
+                            : positivePercentage > negativePercentage
+                            ? `Generally positive with some concerns (${positivePercentage}% positive vs ${negativePercentage}% negative)`
+                            : negativePercentage > positivePercentage
+                            ? `Mixed feedback with concerns (${negativePercentage}% negative vs ${positivePercentage}% positive)`
+                            : `Balanced feedback (${positivePercentage}% positive, ${negativePercentage}% negative)`
+                          }
+                        </p>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      {sampleResponses.length} responses
+                  </div>
+
+                  {/* Sentiment Breakdown */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-700">Sentiment Breakdown</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-green-700">{overallPositive} positive</span>
+                          <span className="text-xs text-gray-500">({positivePercentage}%)</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-red-700">{overallNegative} negative</span>
+                          <span className="text-xs text-gray-500">({Math.round(((overallNegative / totalAnalyzedSentiment) * 100))}%)</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-gray-700">{overallNeutral} neutral</span>
+                          <span className="text-xs text-gray-500">({Math.round(((overallNeutral / totalAnalyzedSentiment) * 100))}%)</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
                   {/* Key Themes */}
                   {themes.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Key Themes:</h4>
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Key Themes</h4>
                       <div className="flex flex-wrap gap-2">
-                        {themes.slice(0, 5).map(theme => (
-                          <Badge key={theme.id} variant="secondary" className="text-xs">
+                        {themes.slice(0, 6).map(theme => (
+                          <Badge key={theme.id} variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                             {theme.theme_name}
                           </Badge>
                         ))}
+                        {themes.length > 6 && (
+                          <Badge variant="outline" className="text-xs text-gray-500">
+                            +{themes.length - 6} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sample Response Preview */}
+                  {sampleResponses.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Sample Response</h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p className="text-sm text-gray-700 italic">
+                          "{sampleResponses[0].response_text.length > 120 
+                            ? sampleResponses[0].response_text.substring(0, 120) + '...' 
+                            : sampleResponses[0].response_text}"
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              sampleResponses[0].sentiment_label === 'positive' 
+                                ? 'text-green-600 border-green-200 bg-green-50' 
+                                : sampleResponses[0].sentiment_label === 'negative'
+                                ? 'text-red-600 border-red-200 bg-red-50'
+                                : 'text-gray-600 border-gray-200 bg-gray-50'
+                            }`}
+                          >
+                            {sampleResponses[0].sentiment_label}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            Score: {sampleResponses[0].sentiment_score.toFixed(1)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
