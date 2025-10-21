@@ -368,7 +368,97 @@ export default function SurveyAnalysisDetailPage() {
         </div>
         
         {survey.is_multi_question ? (
-          <MultiQuestionInsights insights={insights} survey={survey} />
+          <div className="grid gap-6">
+            {Object.entries(questionGroups).map(([questionText, questionInsights]) => {
+              // Calculate sentiment for this question
+              const questionResponses = sampleResponses.filter(r => r.question_text === questionText);
+              const sentimentCounts = questionResponses.reduce((acc, response) => {
+                acc[response.sentiment_label] = (acc[response.sentiment_label] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+              
+              const totalResponses = Object.values(sentimentCounts).reduce((sum, count) => sum + count, 0);
+              const positiveCount = sentimentCounts['positive'] || 0;
+              const negativeCount = sentimentCounts['negative'] || 0;
+              const neutralCount = sentimentCounts['neutral'] || 0;
+              
+              const positivePercentage = totalResponses > 0 ? (positiveCount / totalResponses) * 100 : 0;
+              const negativePercentage = totalResponses > 0 ? (negativeCount / totalResponses) * 100 : 0;
+              
+              // Get themes for this question
+              const questionThemes = themes.filter(theme => 
+                theme.related_questions?.includes(questionText) || 
+                questionResponses.some(r => r.themes?.includes(theme.theme_name))
+              );
+              
+              return (
+                <Card key={questionText} className="border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                      </div>
+                      {questionText}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Sentiment Overview */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{positiveCount}</div>
+                        <div className="text-sm text-green-700">Positive ({positivePercentage.toFixed(0)}%)</div>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">{negativeCount}</div>
+                        <div className="text-sm text-red-700">Negative ({negativePercentage.toFixed(0)}%)</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-600">{neutralCount}</div>
+                        <div className="text-sm text-gray-700">Neutral</div>
+                      </div>
+                    </div>
+                    
+                    {/* Key Themes */}
+                    {questionThemes.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Tag className="h-4 w-4 text-blue-600" />
+                          Key Themes
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {questionThemes.slice(0, 5).map(theme => (
+                            <Badge key={theme.id} variant="secondary" className="text-sm">
+                              {theme.theme_name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Sample Feedback */}
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                        Sample Feedback
+                      </h4>
+                      <div className="space-y-2">
+                        {questionResponses.slice(0, 3).map(response => (
+                          <div key={response.id} className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-700 italic">"{response.response_text}"</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <Badge variant={response.sentiment_label === 'positive' ? 'success' : response.sentiment_label === 'negative' ? 'destructive' : 'secondary'}>
+                                {response.sentiment_label}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid gap-6">
             {insights.map((insight) => (
