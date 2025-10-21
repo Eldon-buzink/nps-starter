@@ -9,6 +9,27 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Check environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('NEXT_PUBLIC_SUPABASE_URL is not set');
+      return NextResponse.json({ error: 'Database configuration missing' }, { status: 500 });
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+      return NextResponse.json({ error: 'Database configuration missing' }, { status: 500 });
+    }
+
+    // Test database connection
+    const { error: connectionError } = await supabase
+      .from('survey_analyses')
+      .select('id')
+      .limit(1);
+    
+    if (connectionError) {
+      console.error('Database connection failed:', connectionError);
+      return NextResponse.json({ error: 'Database connection failed', details: connectionError.message }, { status: 500 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     
