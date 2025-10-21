@@ -52,6 +52,8 @@ export function SurveyUpload({ onUploadComplete }: SurveyUploadProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('surveyName', file.name.replace('.csv', ''));
+      formData.append('responseColumn', 'response_text'); // Default column name
 
       // Simulate upload progress
       const progressInterval = setInterval(() => {
