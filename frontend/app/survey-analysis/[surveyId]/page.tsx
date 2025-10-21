@@ -372,21 +372,20 @@ export default function SurveyAnalysisDetailPage() {
         ) : (
           <div className="grid gap-6">
             {insights.map((insight) => (
-              <Card key={insight.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-blue-600" />
-                    {insight.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* Special handling for Team Action Plan to parse structured content */}
-                  {insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
-                    <div className="space-y-4">
-                      {/* Parse and display structured action plan as individual cards */}
-                      {parseActionPlan(insight.description)}
-                    </div>
-                  ) : (
+              insight.title === 'Team Action Plan' && insight.description.includes('**1.') ? (
+                // Special handling for Team Action Plan - no card wrapper, just the action items
+                <div key={insight.id} className="space-y-4">
+                  {parseActionPlan(insight.description)}
+                </div>
+              ) : (
+                <Card key={insight.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-blue-600" />
+                      {insight.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="prose prose-sm max-w-none">
                       {insight.description.split('\n').map((line, index) => (
                         <p key={index} className="mb-2 last:mb-0">
@@ -394,9 +393,9 @@ export default function SurveyAnalysisDetailPage() {
                         </p>
                       ))}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )
             ))}
           </div>
         )}
