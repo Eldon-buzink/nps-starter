@@ -84,6 +84,12 @@ Return JSON format:
         const analysis = JSON.parse(completion.choices[0].message.content || '{}');
         console.log(`Analysis result for response ${response.id}:`, analysis);
         
+        // Validate analysis structure
+        if (!analysis.sentiment || !analysis.sentiment_score || !analysis.themes) {
+          console.error(`Invalid analysis structure for response ${response.id}:`, analysis);
+          throw new Error('Invalid AI analysis structure');
+        }
+        
         // Update response with analysis (store full blob in ai_analysis)
         const updatedResponse = {
           ...response,
@@ -194,13 +200,20 @@ Return JSON format:
     }
 
     // Update survey status
-    await supabase
+    const { error: statusError } = await supabase
       .from('survey_analyses')
       .update({ 
         status: 'completed',
         total_responses: processedResponses.length
       })
       .eq('id', surveyId);
+    
+    if (statusError) {
+      console.error('Error updating survey status:', statusError);
+      throw new Error('Failed to update survey status');
+    }
+    
+    console.log(`Survey ${surveyId} processing completed successfully`);
 
     return NextResponse.json({ 
       success: true, 
