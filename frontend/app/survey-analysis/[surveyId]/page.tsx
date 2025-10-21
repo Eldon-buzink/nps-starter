@@ -48,6 +48,7 @@ export default function SurveyAnalysisDetailPage() {
   const [analysisData, setAnalysisData] = useState<SurveyAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllResponses, setShowAllResponses] = useState(false);
 
   useEffect(() => {
     async function fetchAnalysisData() {
@@ -772,6 +773,104 @@ export default function SurveyAnalysisDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Sample Responses with Classification */}
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <MessageSquare className="h-6 w-6 text-orange-600" />
+            <h2 className="text-2xl font-bold text-gray-900">Sample Responses</h2>
+          </div>
+          
+          <div className="space-y-4">
+            {(showAllResponses ? sampleResponses : sampleResponses.slice(0, 5)).map((response, index) => (
+              <Card key={response.id} className="border border-gray-200 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {/* Response Text */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <p className="text-sm text-gray-700 italic leading-relaxed">
+                        "{response.response_text}"
+                      </p>
+                    </div>
+                    
+                    {/* Classification */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {/* Sentiment */}
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            response.sentiment_label === 'positive' 
+                              ? 'bg-green-500' 
+                              : response.sentiment_label === 'negative'
+                              ? 'bg-red-500'
+                              : 'bg-gray-500'
+                          }`}></div>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              response.sentiment_label === 'positive' 
+                                ? 'text-green-600 border-green-200 bg-green-50' 
+                                : response.sentiment_label === 'negative'
+                                ? 'text-red-600 border-red-200 bg-red-50'
+                                : 'text-gray-600 border-gray-200 bg-gray-50'
+                            }`}
+                          >
+                            {response.sentiment_label}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            Score: {response.sentiment_score.toFixed(1)}
+                          </span>
+                        </div>
+                        
+                        {/* Question (for multi-question surveys) */}
+                        {survey.is_multi_question && response.question_text && (
+                          <div className="text-xs text-gray-500">
+                            From: {response.question_text.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="text-xs text-gray-400">
+                        Response #{index + 1}
+                      </div>
+                    </div>
+                    
+                    {/* Themes */}
+                    {response.themes && response.themes.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-medium text-gray-600">Identified Themes:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {response.themes.map((theme, themeIndex) => (
+                            <Badge key={themeIndex} variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              {theme}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Show More/Less Toggle */}
+            {sampleResponses.length > 5 && (
+              <div className="text-center">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAllResponses(!showAllResponses)}
+                  className="text-gray-600"
+                >
+                  {showAllResponses 
+                    ? `Show Less (5 of ${sampleResponses.length})` 
+                    : `Show All ${sampleResponses.length} Responses`
+                  }
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
