@@ -144,7 +144,6 @@ export async function POST(request: NextRequest) {
               response_text: row[questionColumn],
               question_text: questionColumn,
               question_order: questionIndex,
-              participant_id: row.participant_id || `P${participantIndex + 1}`,
               metadata: Object.fromEntries(
                 Object.entries(row).filter(([key, value]) => 
                   !responseColumns.includes(key) && value
@@ -163,7 +162,6 @@ export async function POST(request: NextRequest) {
         response_text: row[mainResponseColumn],
         question_text: mainResponseColumn,
         question_order: 0,
-        participant_id: row.participant_id || `P${index + 1}`,
         metadata: Object.fromEntries(
           Object.entries(row).filter(([key, value]) => key !== mainResponseColumn && value)
         )
