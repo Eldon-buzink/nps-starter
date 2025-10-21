@@ -206,15 +206,6 @@ export default function SurveyAnalysisDetailPage() {
 
   const { survey, themes, insights, sampleResponses } = analysisData;
 
-  // Calculate sentiment distribution
-  const sentimentCounts = sampleResponses.reduce((acc, response) => {
-    acc[response.sentiment_label] = (acc[response.sentiment_label] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Get top themes
-  const topThemes = themes.slice(0, 10);
-
   // Parse action plan content into structured components
   const parseActionPlan = (content: string) => {
     const sections = content.split(/\*\*\d+\.\s+/).slice(1); // Remove intro text and split by numbered sections
@@ -303,6 +294,15 @@ export default function SurveyAnalysisDetailPage() {
       );
     });
   };
+
+  // Calculate sentiment distribution
+  const sentimentCounts = sampleResponses.reduce((acc, response) => {
+    acc[response.sentiment_label] = (acc[response.sentiment_label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Get top themes
+  const topThemes = themes.slice(0, 10);
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
