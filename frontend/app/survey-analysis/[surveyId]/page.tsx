@@ -179,34 +179,6 @@ export default function SurveyAnalysisDetailPage() {
 
     return (
       <div className="space-y-8">
-        {/* Overall insights first */}
-        {overallInsights.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900">Overall Survey Analysis</h3>
-            <div className="grid gap-4">
-              {overallInsights.map((insight, index) => (
-                <Card key={index} className="border-purple-200 bg-purple-50">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="text-2xl">📊</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-lg">{insight.title}</h4>
-                          <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
-                            Priority: {insight.priority}/10
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-700 whitespace-pre-line">
-                          {insight.description}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Per-question insights */}
         {Object.entries(questionGroups).map(([questionText, questionInsights]) => (
