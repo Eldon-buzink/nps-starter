@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         original_filename: file.name,
         total_responses: validResponses.length,
         response_column: mainResponseColumn,
-        headers: headers,
+        headers: JSON.stringify(headers),
         question_columns: responseColumns,
         is_multi_question: isMultiQuestion,
         status: 'processing'
@@ -115,7 +115,18 @@ export async function POST(request: NextRequest) {
 
     if (surveyError) {
       console.error('Error storing survey metadata:', surveyError);
-      return NextResponse.json({ error: 'Failed to store survey data' }, { status: 500 });
+      console.error('Survey data being inserted:', {
+        id: surveyId,
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        original_filename: file.name,
+        total_responses: validResponses.length,
+        response_column: mainResponseColumn,
+        headers: JSON.stringify(headers),
+        question_columns: responseColumns,
+        is_multi_question: isMultiQuestion,
+        status: 'processing'
+      });
+      return NextResponse.json({ error: 'Failed to store survey data', details: surveyError.message }, { status: 500 });
     }
 
     // Store individual responses
@@ -165,7 +176,9 @@ export async function POST(request: NextRequest) {
 
     if (responsesError) {
       console.error('Error storing survey responses:', responsesError);
-      return NextResponse.json({ error: 'Failed to store survey responses' }, { status: 500 });
+      console.error('Number of responses to insert:', responses.length);
+      console.error('Sample response structure:', responses[0]);
+      return NextResponse.json({ error: 'Failed to store survey responses', details: responsesError.message }, { status: 500 });
     }
 
     // Trigger AI analysis asynchronously
