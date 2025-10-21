@@ -115,6 +115,82 @@ export default function SurveyAnalysisDetailPage() {
   // Get top themes
   const topThemes = themes.slice(0, 10);
 
+  // Parse action plan content into structured components
+  function parseActionPlan(content: string) {
+    const sections = content.split(/\*\*\d+\.\s+/).slice(1); // Remove intro text and split by numbered sections
+    
+    return sections.map((section, index) => {
+      const lines = section.split('\n').filter(line => line.trim());
+      const title = lines[0]?.replace(/\*\*/g, '').trim() || `Section ${index + 1}`;
+      
+      // Extract metrics, feedback, and actions
+      const metrics = lines.find(line => line.includes('Mentioned by'))?.trim() || '';
+      const positiveFeedback = lines.find(line => line.includes('Positive feedback:'))?.replace('• Positive feedback: ', '').trim() || '';
+      const issueReported = lines.find(line => line.includes('Issue reported:'))?.replace('• Issue reported: ', '').trim() || '';
+      const action = lines.find(line => line.includes('Action:'))?.replace('• Action: ', '').trim() || '';
+      
+      return (
+        <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <h4 className="font-semibold text-lg text-gray-900">{title}</h4>
+            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+              #{index + 1}
+            </Badge>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Metrics */}
+            {metrics && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Users className="h-4 w-4 text-blue-500" />
+                <span>{metrics}</span>
+              </div>
+            )}
+            
+            {/* Positive Feedback */}
+            {positiveFeedback && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-green-600 mt-0.5">✅</div>
+                  <div>
+                    <div className="font-medium text-green-800 text-sm mb-1">Positive Feedback</div>
+                    <blockquote className="text-sm text-green-700 italic">"{positiveFeedback}"</blockquote>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Issue Reported */}
+            {issueReported && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-red-600 mt-0.5">⚠️</div>
+                  <div>
+                    <div className="font-medium text-red-800 text-sm mb-1">Issue Reported</div>
+                    <blockquote className="text-sm text-red-700 italic">"{issueReported}"</blockquote>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Action */}
+            {action && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-blue-600 mt-0.5">🎯</div>
+                  <div>
+                    <div className="font-medium text-blue-800 text-sm mb-1">Recommended Action</div>
+                    <div className="text-sm text-blue-700">{action}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    });
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Enhanced Header */}
@@ -267,6 +343,32 @@ export default function SurveyAnalysisDetailPage() {
                     return '💡';
                 }
               };
+
+              // Special handling for Team Action Plan to parse structured content
+              if (insight.title === 'Team Action Plan' && insight.description.includes('**1.')) {
+                return (
+                  <Card key={insight.id} className="border-green-200 bg-green-50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="text-2xl">🎯</div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-semibold text-lg">{insight.title}</h3>
+                            <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
+                              Priority: {insight.priority}/10
+                            </Badge>
+                          </div>
+                          
+                          {/* Parse and display structured action plan */}
+                          <div className="space-y-6">
+                            {parseActionPlan(insight.description)}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              }
 
               return (
                 <Card key={insight.id} className={`${getCardStyle(insight.insight_type)}`}>
