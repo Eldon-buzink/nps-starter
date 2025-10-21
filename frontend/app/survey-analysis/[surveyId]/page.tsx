@@ -435,67 +435,116 @@ export default function SurveyAnalysisDetailPage() {
               );
               
               return (
-                <Card key={questionText} className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-4 border-b border-gray-100">
-                    <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                <Card key={questionText} className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50">
+                  <CardHeader className="pb-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <MessageSquare className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl font-bold text-gray-900 mb-1">
+                            {questionText.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </CardTitle>
+                          <p className="text-sm text-gray-600">{totalResponses} responses analyzed</p>
+                        </div>
                       </div>
-                      {questionText.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </CardTitle>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900">{totalResponses}</div>
+                        <div className="text-xs text-gray-500">Total Responses</div>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-6 pt-6">
-                    {/* Sentiment Overview */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                        <div className="text-2xl font-bold text-green-600">{positiveCount}</div>
-                        <div className="text-sm text-green-700 font-medium">Positive</div>
-                        <div className="text-xs text-green-600">{positivePercentage.toFixed(0)}%</div>
-                      </div>
-                      <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                        <div className="text-2xl font-bold text-red-600">{negativeCount}</div>
-                        <div className="text-sm text-red-700 font-medium">Negative</div>
-                        <div className="text-xs text-red-600">{negativePercentage.toFixed(0)}%</div>
-                      </div>
-                      <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="text-2xl font-bold text-gray-600">{neutralCount}</div>
-                        <div className="text-sm text-gray-700 font-medium">Neutral</div>
-                        <div className="text-xs text-gray-600">{((neutralCount / totalResponses) * 100).toFixed(0)}%</div>
+                  
+                  <CardContent className="space-y-6">
+                    {/* Sentiment Overview with Visual Indicators */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-100">
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                        Sentiment Breakdown
+                      </h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200">
+                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white font-bold text-sm">+</span>
+                          </div>
+                          <div className="text-2xl font-bold text-green-600">{positiveCount}</div>
+                          <div className="text-sm text-green-700 font-medium">Positive</div>
+                          <div className="text-xs text-green-600 font-semibold">{positivePercentage.toFixed(0)}%</div>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border-2 border-red-200">
+                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white font-bold text-sm">-</span>
+                          </div>
+                          <div className="text-2xl font-bold text-red-600">{negativeCount}</div>
+                          <div className="text-sm text-red-700 font-medium">Negative</div>
+                          <div className="text-xs text-red-600 font-semibold">{negativePercentage.toFixed(0)}%</div>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-200">
+                          <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white font-bold text-sm">~</span>
+                          </div>
+                          <div className="text-2xl font-bold text-gray-600">{neutralCount}</div>
+                          <div className="text-sm text-gray-700 font-medium">Neutral</div>
+                          <div className="text-xs text-gray-600 font-semibold">{((neutralCount / totalResponses) * 100).toFixed(0)}%</div>
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Key Themes */}
+                    {/* Key Themes with Visual Enhancement */}
                     {questionThemes.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                          <Tag className="h-4 w-4 text-blue-600" />
-                          Key Themes
+                      <div className="bg-white rounded-xl p-6 border border-gray-100">
+                        <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <Tag className="h-5 w-5 text-purple-600" />
+                          Key Themes Identified
                         </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {questionThemes.slice(0, 5).map(theme => (
-                            <Badge key={theme.id} variant="secondary" className="text-sm bg-blue-50 text-blue-700 border border-blue-200">
-                              {theme.theme_name}
-                            </Badge>
+                        <div className="grid grid-cols-2 gap-3">
+                          {questionThemes.slice(0, 6).map((theme, index) => (
+                            <div key={theme.id} className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">{index + 1}</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-800">{theme.theme_name}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
                     
-                    {/* Sample Feedback */}
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                    {/* Sample Feedback with Better Design */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-100">
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5 text-orange-600" />
                         Sample Feedback
                       </h4>
-                      <div className="space-y-3">
-                        {questionResponses.slice(0, 3).map(response => (
-                          <div key={response.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <p className="text-sm text-gray-700 italic mb-2">"{response.response_text}"</p>
-                            <div className="flex items-center justify-between">
-                              <Badge variant={response.sentiment_label === 'positive' ? 'success' : response.sentiment_label === 'negative' ? 'destructive' : 'secondary'}>
-                                {response.sentiment_label}
-                              </Badge>
+                      <div className="space-y-4">
+                        {questionResponses.slice(0, 3).map((response, index) => (
+                          <div key={response.id} className={`p-4 rounded-lg border-l-4 ${
+                            response.sentiment_label === 'positive' 
+                              ? 'bg-green-50 border-green-400' 
+                              : response.sentiment_label === 'negative'
+                              ? 'bg-red-50 border-red-400'
+                              : 'bg-gray-50 border-gray-400'
+                          }`}>
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                  response.sentiment_label === 'positive' 
+                                    ? 'bg-green-500' 
+                                    : response.sentiment_label === 'negative'
+                                    ? 'bg-red-500'
+                                    : 'bg-gray-500'
+                                }`}>
+                                  <span className="text-white font-bold text-xs">
+                                    {response.sentiment_label === 'positive' ? '+' : response.sentiment_label === 'negative' ? '-' : '~'}
+                                  </span>
+                                </div>
+                                <Badge variant={response.sentiment_label === 'positive' ? 'success' : response.sentiment_label === 'negative' ? 'destructive' : 'secondary'}>
+                                  {response.sentiment_label}
+                                </Badge>
+                              </div>
                             </div>
+                            <p className="text-sm text-gray-700 italic leading-relaxed">"{response.response_text}"</p>
                           </div>
                         ))}
                       </div>
