@@ -347,26 +347,10 @@ export default function SurveyAnalysisDetailPage() {
               // Special handling for Team Action Plan to parse structured content
               if (insight.title === 'Team Action Plan' && insight.description.includes('**1.')) {
                 return (
-                  <Card key={insight.id} className="border-green-200 bg-green-50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="text-2xl">🎯</div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-lg">{insight.title}</h3>
-                            <Badge variant={insight.priority >= 8 ? "destructive" : "secondary"}>
-                              Priority: {insight.priority}/10
-                            </Badge>
-                          </div>
-                          
-                          {/* Parse and display structured action plan */}
-                          <div className="space-y-6">
-                            {parseActionPlan(insight.description)}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div key={insight.id} className="space-y-6">
+                    {/* Parse and display structured action plan as individual cards */}
+                    {parseActionPlan(insight.description)}
+                  </div>
                 );
               }
 
