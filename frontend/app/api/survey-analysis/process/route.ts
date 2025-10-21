@@ -278,7 +278,9 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     const negativeShare = data.negativeCount / data.count;
     const sentimentDistance = Math.abs(0.5 - (data.avgSentiment || 0.5)); // Distance from neutral
     
-    const severityScore = volumeWeight * negativeShare * (1 + sentimentDistance);
+    // Balanced scoring: prioritize volume but also consider sentiment impact
+    const sentimentImpact = negativeShare > 0.5 ? negativeShare : (1 - negativeShare); // Higher impact for extreme sentiment
+    const severityScore = volumeWeight * (0.7 * sentimentImpact + 0.3 * (1 + sentimentDistance));
     themeSeverityScores.set(theme, {
       ...data,
       severityScore,
@@ -307,30 +309,6 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
     });
   }
 
-  // Insight 2: What Customers Love (if there are positive responses)
-  if (positiveCount > 0) {
-    const positiveThemes = Array.from(themeSeverityScores.entries())
-      .filter(([_, data]) => data.responses.some(r => r.sentiment_label === 'positive'))
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 3);
-
-    if (positiveThemes.length > 0) {
-      const topPositiveTheme = positiveThemes[0];
-      const positiveQuotes = topPositiveTheme[1].responses
-        .filter(r => r.sentiment_label === 'positive')
-        .slice(0, 2)
-        .map(r => r.response_text?.substring(0, 150) + '...')
-        .filter(Boolean);
-
-      insights.push({
-        type: 'summary',
-        title: 'What Customers Love',
-        content: `**Top Positive Theme:** ${topPositiveTheme[0]} (${topPositiveTheme[1].count} mentions)\n\n**Customer Feedback:**\n${positiveQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** This is what customers appreciate most about your product/service. Consider highlighting these strengths in marketing and ensuring they remain consistent.`,
-        themes: [topPositiveTheme[0]],
-        impact: 0.7
-      });
-    }
-  }
 
   // Generate insights for all themes (no thresholds)
   const maxInsights = Math.min(5, sortedThemes.length); // Show top 5 by default
@@ -394,23 +372,42 @@ async function generateInsights(responses: any[], themes: Map<string, any>) {
       actionPlan += `• Mentioned by ${data.count} customers (${positiveCount} positive, ${negativeCount} negative)\n`;
       actionPlan += `• Severity score: ${data.severityScore.toFixed(2)} (${Math.round(data.negativeShare * 100)}% negative)\n`;
       
-      if (positiveFeedback) {
-        actionPlan += `• Positive feedback: "${positiveFeedback}"\n`;
+      // Show both positive and negative feedback together
+      if (positiveFeedback && negativeFeedback) {
+        actionPlan += `• What customers love: "${positiveFeedback}"\n`;
+        actionPlan += `• Issues to address: "${negativeFeedback}"\n`;
+      } else if (positiveFeedback) {
+        actionPlan += `• What customers love: "${positiveFeedback}"\n`;
+      } else if (negativeFeedback) {
+        actionPlan += `• Issues to address: "${negativeFeedback}"\n`;
       }
       
-      if (negativeFeedback) {
-        actionPlan += `• Issue reported: "${negativeFeedback}"\n`;
-      }
-      
+      // Generate specific action recommendations based on theme and feedback
+      let action = '';
       if (negativeCount > 0 && positiveCount > 0) {
-        actionPlan += `• Action: Address the issues while maintaining the positive aspects customers love\n`;
+        action = `Address the issues while maintaining the positive aspects customers love`;
       } else if (negativeCount > 0) {
-        actionPlan += `• Action: Address the issues mentioned above\n`;
+        // Theme-specific negative actions
+        if (theme.toLowerCase().includes('shipping') || theme.toLowerCase().includes('delivery')) {
+          action = `Review shipping costs and delivery options - consider free shipping thresholds or alternative carriers`;
+        } else if (theme.toLowerCase().includes('pricing') || theme.toLowerCase().includes('cost')) {
+          action = `Analyze pricing strategy and competitor positioning - consider value-based pricing or discounts`;
+        } else if (theme.toLowerCase().includes('quality') || theme.toLowerCase().includes('product')) {
+          action = `Investigate quality control processes and customer expectations - review manufacturing standards`;
+        } else if (theme.toLowerCase().includes('support') || theme.toLowerCase().includes('service')) {
+          action = `Enhance customer service training and response times - consider additional support channels`;
+        } else if (theme.toLowerCase().includes('interface') || theme.toLowerCase().includes('usability')) {
+          action = `Conduct UX research and usability testing - prioritize user experience improvements`;
+        } else {
+          action = `Investigate root cause and implement targeted improvements`;
+        }
       } else if (positiveCount > 0) {
-        actionPlan += `• Action: Continue and amplify what customers love - consider featuring this in marketing\n`;
+        action = `Continue and amplify what customers love - consider featuring this in marketing and product development`;
       } else {
-        actionPlan += `• Action: Monitor this theme for future feedback\n`;
+        action = `Monitor this theme for future feedback and trends`;
       }
+      
+      actionPlan += `• Action: ${action}\n`;
       
       actionPlan += `\n`;
     });
