@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         original_filename: file.name,
         total_responses: validResponses.length,
         response_column: mainResponseColumn,
-        headers: JSON.stringify(headers),
+        headers: headers,
         question_columns: responseColumns,
         is_multi_question: isMultiQuestion,
         status: 'processing'
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         original_filename: file.name,
         total_responses: validResponses.length,
         response_column: mainResponseColumn,
-        headers: JSON.stringify(headers),
+        headers: headers,
         question_columns: responseColumns,
         is_multi_question: isMultiQuestion,
         status: 'processing'
