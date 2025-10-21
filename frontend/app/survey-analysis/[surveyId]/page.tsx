@@ -216,7 +216,7 @@ export default function SurveyAnalysisDetailPage() {
   const topThemes = themes.slice(0, 10);
 
   // Parse action plan content into structured components
-  function parseActionPlan(content: string) {
+  const parseActionPlan = (content: string) => {
     const sections = content.split(/\*\*\d+\.\s+/).slice(1); // Remove intro text and split by numbered sections
     
     return sections.map((section, index) => {
@@ -302,7 +302,7 @@ export default function SurveyAnalysisDetailPage() {
         </div>
       );
     });
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
