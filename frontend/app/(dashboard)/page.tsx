@@ -123,8 +123,8 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     let query = supabase
       .from('nps_response')
       .select('nps_score')
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -261,15 +261,15 @@ async function getDataCoverage(params: {start?:string,end?:string,survey?:string
     const { data: totalData, error: totalError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31');
 
     const { data: commentsData, error: commentsError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
       .not('nps_explanation', 'is', null)
-      .gte('creation_date', params.start || '2024-01-01')
-      .lte('creation_date', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2024-01-01')
+      .lte('created_at', params.end || '2025-12-31');
 
     const { data: enrichedData, error: enrichedError } = await supabase
       .from('nps_ai_enrichment')
