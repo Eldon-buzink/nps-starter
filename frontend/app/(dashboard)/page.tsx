@@ -667,25 +667,25 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {/* Actionable Insights */}
               <div className="bg-green-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-green-900 mb-2">✅ Wat gaat goed?</h4>
-                {themes.promoterThemes.length > 0 ? (
+                {themes.promoterThemes.length > 0 && themes.promoterThemes[0].theme !== 'overige' ? (
                   <p className="text-sm text-green-800">
                     Promoters waarderen vooral <strong>{themes.promoterThemes[0].theme.replace('_', ' ')}</strong> ({themes.promoterThemes[0].share_pct?.toFixed(1)}%). 
-                    {themes.promoterThemes[1] && ` Ook ${themes.promoterThemes[1].theme.replace('_', ' ')} wordt positief genoemd (${themes.promoterThemes[1].share_pct?.toFixed(1)}%).`}
+                    {themes.promoterThemes[1] && themes.promoterThemes[1].theme !== 'overige' && ` Ook ${themes.promoterThemes[1].theme.replace('_', ' ')} wordt positief genoemd (${themes.promoterThemes[1].share_pct?.toFixed(1)}%).`}
                   </p>
                 ) : (
-                  <p className="text-sm text-green-800">Geen specifieke promoter thema's geïdentificeerd.</p>
+                  <p className="text-sm text-green-800">Positieve feedback is verspreid over verschillende thema's. Focus op specifieke verbeteringen per thema.</p>
                 )}
               </div>
 
               <div className="bg-red-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-red-900 mb-2">⚠️ Verbeterpunten</h4>
-                {themes.detractorThemes.length > 0 ? (
+                {themes.detractorThemes.length > 0 && themes.detractorThemes[0].theme !== 'overige' ? (
                   <p className="text-sm text-red-800">
                     Detractors klagen vooral over <strong>{themes.detractorThemes[0].theme.replace('_', ' ')}</strong> ({themes.detractorThemes[0].share_pct?.toFixed(1)}%). 
-                    {themes.detractorThemes[1] && ` Ook ${themes.detractorThemes[1].theme.replace('_', ' ')} is een probleem (${themes.detractorThemes[1].share_pct?.toFixed(1)}%).`}
+                    {themes.detractorThemes[1] && themes.detractorThemes[1].theme !== 'overige' && ` Ook ${themes.detractorThemes[1].theme.replace('_', ' ')} is een probleem (${themes.detractorThemes[1].share_pct?.toFixed(1)}%).`}
                   </p>
                 ) : (
-                  <p className="text-sm text-red-800">Geen specifieke detractor thema's geïdentificeerd.</p>
+                  <p className="text-sm text-red-800">Negatieve feedback is verspreid over verschillende thema's. Analyseer specifieke klachten per categorie.</p>
                 )}
               </div>
 
@@ -693,11 +693,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <div className="bg-yellow-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-yellow-900 mb-2">🎯 Aanbevelingen</h4>
                 <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• <strong>Focus op {themes.detractorThemes[0]?.theme.replace('_', ' ')}</strong> - dit is de grootste bron van ontevredenheid</li>
-                  <li>• <strong>Behoud {themes.promoterThemes[0]?.theme.replace('_', ' ')}</strong> - dit is wat promoters waarderen</li>
+                  {themes.detractorThemes.length > 0 && themes.detractorThemes[0].theme !== 'overige' ? (
+                    <li>• <strong>Focus op {themes.detractorThemes[0].theme.replace('_', ' ')}</strong> - dit is de grootste bron van ontevredenheid</li>
+                  ) : (
+                    <li>• <strong>Analyseer specifieke klachten</strong> - bekijk individuele thema's voor gerichte verbeteringen</li>
+                  )}
+                  {themes.promoterThemes.length > 0 && themes.promoterThemes[0].theme !== 'overige' ? (
+                    <li>• <strong>Behoud {themes.promoterThemes[0].theme.replace('_', ' ')}</strong> - dit is wat promoters waarderen</li>
+                  ) : (
+                    <li>• <strong>Versterk positieve aspecten</strong> - identificeer wat promoters waarderen</li>
+                  )}
                   <li>• <strong>Analyseer de trends</strong> om te zien welke titels verbeteren of verslechteren</li>
-            </ul>
-          </div>
+                </ul>
+              </div>
         </div>
         <p className="text-xs text-muted-foreground mt-4">
           Hoe deze inzichten werken: De AI analyseert de opmerkingen en identificeert terugkerende thema's en sentimenten.
@@ -705,11 +713,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </CardContent>
     </Card>
           </div>
-        </div>
-
-        {/* Data Coverage */}
-        <div className="text-sm text-muted-foreground text-right">
-          In deze periode: {coverage.total} reacties • {coverage.withComments}% met opmerking • {coverage.enriched}% geclassificeerd.
         </div>
 
         {/* Footer */}
