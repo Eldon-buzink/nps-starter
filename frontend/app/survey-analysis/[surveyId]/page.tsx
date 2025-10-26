@@ -169,11 +169,11 @@ export default function SurveyAnalysisDetailPage() {
   const questionGroups: { [key: string]: any[] } = {};
   if (survey.is_multi_question && sampleResponses.length > 0) {
     sampleResponses.forEach(response => {
-      if (response.question_text) {
-        if (!questionGroups[response.question_text]) {
-          questionGroups[response.question_text] = [];
+      if ((response as any).question_text) {
+        if (!questionGroups[(response as any).question_text]) {
+          questionGroups[(response as any).question_text] = [];
         }
-        questionGroups[response.question_text].push(response);
+        questionGroups[(response as any).question_text].push(response);
       }
     });
   }
@@ -445,7 +445,7 @@ export default function SurveyAnalysisDetailPage() {
               // Multi-question: Show each question separately
               Object.entries(questionGroups).map(([questionText, questionInsights]) => {
                 // Calculate sentiment for this question
-                const questionResponses = sampleResponses.filter(r => r.question_text === questionText);
+                const questionResponses = sampleResponses.filter((r: any) => r.question_text === questionText);
                 const sentimentCounts = questionResponses.reduce((acc, response) => {
                   acc[response.sentiment_label] = (acc[response.sentiment_label] || 0) + 1;
                   return acc;
@@ -457,14 +457,15 @@ export default function SurveyAnalysisDetailPage() {
                 const neutralCount = sentimentCounts['neutral'] || 0;
                 
                 // Get themes for this question
-                const questionThemes = themes.filter(theme => 
-                  theme.related_questions?.includes(questionText) || 
-                  questionResponses.some(r => r.themes?.includes(theme.theme_name))
+                const questionThemes = themes.filter((theme: any) =>
+                  (theme as any).related_questions?.includes(questionText) ||
+                  questionResponses.some((r: any) => r.themes?.includes(theme.theme_name))
                 );
                 
                 // Calculate sentiment percentage for insights
-                const positivePercentage = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
-                const negativePercentage = totalResponses > 0 ? Math.round((negativeCount / totalResponses) * 100) : 0;
+                const totalQuestionResponses = questionResponses.length;
+                const positivePercentage = totalQuestionResponses > 0 ? Math.round((positiveCount / totalQuestionResponses) * 100) : 0;
+                const negativePercentage = totalQuestionResponses > 0 ? Math.round((negativeCount / totalQuestionResponses) * 100) : 0;
                 
                 // Generate concrete insight based on actual response analysis
                 const getMainInsight = () => {
@@ -473,11 +474,11 @@ export default function SurveyAnalysisDetailPage() {
                   const topThemeNames = topThemes.map(t => t.theme_name);
                   
                   // Get sample positive and negative responses for analysis
-                  const positiveResponses = questionResponses.filter(r => r.sentiment_label === 'positive');
-                  const negativeResponses = questionResponses.filter(r => r.sentiment_label === 'negative');
+                  const positiveResponses = questionResponses.filter((r: any) => r.sentiment_label === 'positive');
+                  const negativeResponses = questionResponses.filter((r: any) => r.sentiment_label === 'negative');
                   
                   // Analyze common words/phrases in responses dynamically
-                  const allResponseText = questionResponses.map(r => r.response_text.toLowerCase()).join(' ');
+                  const allResponseText = questionResponses.map((r: any) => r.response_text.toLowerCase()).join(' ');
                   
                   // Extract meaningful words (3+ characters, not common stop words)
                   const stopWords = ['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'put', 'say', 'she', 'too', 'use'];
@@ -631,8 +632,15 @@ export default function SurveyAnalysisDetailPage() {
                         <h4 className="text-sm font-medium text-blue-900 mb-1">Key Insight</h4>
                         <p className="text-sm text-blue-800">
                           {(() => {
+                            // Calculate sentiment percentages for single-question surveys
+                            const totalResponses = sampleResponses.length;
+                            const positiveCount = sampleResponses.filter((r: any) => r.sentiment_label === 'positive').length;
+                            const negativeCount = sampleResponses.filter((r: any) => r.sentiment_label === 'negative').length;
+                            const positivePercentage = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
+                            const negativePercentage = totalResponses > 0 ? Math.round((negativeCount / totalResponses) * 100) : 0;
+                            
                             // Analyze actual response content for single-question surveys
-                            const allResponseText = sampleResponses.map(r => r.response_text.toLowerCase()).join(' ');
+                            const allResponseText = sampleResponses.map((r: any) => r.response_text.toLowerCase()).join(' ');
                             const stopWords = ['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'put', 'say', 'she', 'too', 'use'];
                             const words = allResponseText.split(/\s+/)
                               .filter(word => word.length >= 3 && !stopWords.includes(word))
@@ -824,9 +832,9 @@ export default function SurveyAnalysisDetailPage() {
                         </div>
                         
                         {/* Question (for multi-question surveys) */}
-                        {survey.is_multi_question && response.question_text && (
+                        {survey.is_multi_question && (response as any).question_text && (
                           <div className="text-xs text-gray-500">
-                            From: {response.question_text.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            From: {(response as any).question_text.replace(/^question_\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                           </div>
                         )}
                       </div>

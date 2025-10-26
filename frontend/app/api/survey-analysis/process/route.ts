@@ -52,7 +52,13 @@ export async function POST(request: NextRequest) {
 
     // Process responses with AI
     const processedResponses = [];
-    const themes = new Map<string, { count: number; responses: any[] }>();
+    const themes = new Map<string, { 
+      count: number; 
+      responses: any[]; 
+      negativeCount: number;
+      avgSentiment: number;
+      sentimentSum: number;
+    }>();
 
     for (const response of responses) {
       try {
@@ -125,7 +131,7 @@ Return JSON format:
             const cleanThemeName = theme
               .replace(/^(question_\\d+_|response_text_)/, '') // Remove prefixes
               .replace(/_/g, ' ') // Replace underscores with spaces
-              .replace(/\b\w/g, l => l.toUpperCase()) // Capitalize first letter of each word
+              .replace(/\b\w/g, (l: string) => l.toUpperCase()) // Capitalize first letter of each word
               .trim();
             
             if (!themes.has(cleanThemeName)) {
@@ -296,13 +302,13 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
 
     // Generate per-question insights
     for (const [questionText, questionResponses] of Object.entries(questionGroups)) {
-      if (questionResponses.length > 0) {
+      if ((questionResponses as any[]).length > 0) {
         const questionThemes = new Map();
         
         // Filter themes for this question
         for (const [themeName, themeData] of themes.entries()) {
-          const questionThemeResponses = themeData.responses.filter(r => 
-            questionResponses.some(qr => qr.id === r.id)
+          const questionThemeResponses = themeData.responses.filter((r: any) =>
+            (questionResponses as any[]).some((qr: any) => qr.id === r.id)
           );
           if (questionThemeResponses.length > 0) {
             questionThemes.set(themeName, {
@@ -314,7 +320,7 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
         }
 
         // Generate insights for this question
-        const questionInsights = await generateQuestionInsights(questionText, questionResponses, questionThemes);
+        const questionInsights = await generateQuestionInsights(questionText, questionResponses as any[], questionThemes);
         insights.push(...questionInsights);
       }
     }
@@ -360,7 +366,7 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
 
   // Insight 1: Customer Satisfaction Overview
   const dominantSentiment = Object.entries(sentimentCounts)
-    .sort((a, b) => b[1] - a[1])[0];
+    .sort((a: any, b: any) => b[1] - a[1])[0];
 
   if (dominantSentiment) {
     const satisfactionRate = Math.round((positiveCount / totalResponses) * 100);
@@ -387,13 +393,13 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
     
     // Get unique quotes that haven't been used yet
     const sampleQuotes = data.responses
-      .map(r => r.response_text?.substring(0, 150) + '...')
+      .map((r: any) => r.response_text?.substring(0, 150) + '...')
       .filter(Boolean)
-      .filter(quote => !usedQuotes.has(quote))
+      .filter((quote: any) => !usedQuotes.has(quote))
       .slice(0, evidenceCount);
     
     // Mark quotes as used
-    sampleQuotes.forEach(quote => usedQuotes.add(quote));
+    sampleQuotes.forEach((quote: any) => usedQuotes.add(quote));
 
     const negativeShare = data.negativeCount / data.count;
     const sentimentPercent = Math.round((data.avgSentiment || 0.5) * 100);
@@ -405,7 +411,7 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
     insights.push({
       type: 'theme',
       title: `${theme.charAt(0).toUpperCase() + theme.slice(1)} Analysis`,
-      content: `**Metrics:** ${data.count} mentions, ${Math.round(negativeShare * 100)}% negative, ${sentimentPercent}% sentiment\n\n**Evidence:**\n${sampleQuotes.map((quote, idx) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** ${whyItMatters}`,
+      content: `**Metrics:** ${data.count} mentions, ${Math.round(negativeShare * 100)}% negative, ${sentimentPercent}% sentiment\n\n**Evidence:**\n${sampleQuotes.map((quote: any, idx: number) => `${idx + 1}. "${quote}"`).join('\n')}\n\n**Why it matters:** ${whyItMatters}`,
       themes: [theme],
       impact: Math.min(data.severityScore / 10, 1) // Normalize severity score to 0-1
     });
@@ -417,19 +423,19 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
     let actionPlan = `**Based on ${totalResponses} customer responses, here are specific actions your team should take:**\n\n`;
     
     topThemes.forEach(([theme, data], index) => {
-      const positiveCount = data.responses.filter(r => r.sentiment_label === 'positive').length;
-      const negativeCount = data.responses.filter(r => r.sentiment_label === 'negative').length;
+      const positiveCount = data.responses.filter((r: any) => r.sentiment_label === 'positive').length;
+      const negativeCount = data.responses.filter((r: any) => r.sentiment_label === 'negative').length;
       
       const positiveFeedback = data.responses
-        .filter(r => r.sentiment_label === 'positive')
+        .filter((r: any) => r.sentiment_label === 'positive')
         .slice(0, 1)
-        .map(r => r.response_text?.substring(0, 200))
+        .map((r: any) => r.response_text?.substring(0, 200))
         .join('');
 
       const negativeFeedback = data.responses
-        .filter(r => r.sentiment_label === 'negative')
+        .filter((r: any) => r.sentiment_label === 'negative')
         .slice(0, 1)
-        .map(r => r.response_text?.substring(0, 200))
+        .map((r: any) => r.response_text?.substring(0, 200))
         .join('');
 
       actionPlan += `**${index + 1}. ${theme.charAt(0).toUpperCase() + theme.slice(1)}**\n`;
@@ -444,9 +450,9 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
         actionPlan += `• What customers love: "${positiveFeedback}"\n`;
         // Show additional positive examples if available
         const additionalPositive = data.responses
-          .filter(r => r.sentiment_label === 'positive')
+          .filter((r: any) => r.sentiment_label === 'positive')
           .slice(1, 2)
-          .map(r => r.response_text?.substring(0, 150) + '...')
+          .map((r: any) => r.response_text?.substring(0, 150) + '...')
           .filter(Boolean);
         if (additionalPositive.length > 0) {
           actionPlan += `• Additional positive feedback: "${additionalPositive[0]}"\n`;
@@ -455,9 +461,9 @@ async function generateInsights(responses: any[], themes: Map<string, any>, surv
         actionPlan += `• Issues to address: "${negativeFeedback}"\n`;
         // Show additional negative examples if available
         const additionalNegative = data.responses
-          .filter(r => r.sentiment_label === 'negative')
+          .filter((r: any) => r.sentiment_label === 'negative')
           .slice(1, 2)
-          .map(r => r.response_text?.substring(0, 150) + '...')
+          .map((r: any) => r.response_text?.substring(0, 150) + '...')
           .filter(Boolean);
         if (additionalNegative.length > 0) {
           actionPlan += `• Additional issues: "${additionalNegative[0]}"\n`;
@@ -550,17 +556,17 @@ async function generateQuestionInsights(questionText: string, questionResponses:
     .slice(0, 3);
 
   for (const [themeName, themeData] of sortedThemes) {
-    const positiveResponses = themeData.responses.filter(r => r.sentiment_label === 'positive');
-    const negativeResponses = themeData.responses.filter(r => r.sentiment_label === 'negative');
+    const positiveResponses = themeData.responses.filter((r: any) => r.sentiment_label === 'positive');
+    const negativeResponses = themeData.responses.filter((r: any) => r.sentiment_label === 'negative');
     
     const positiveFeedback = positiveResponses
       .slice(0, 1)
-      .map(r => r.response_text?.substring(0, 150) + '...')
+      .map((r: any) => r.response_text?.substring(0, 150) + '...')
       .join('');
-    
+
     const negativeFeedback = negativeResponses
       .slice(0, 1)
-      .map(r => r.response_text?.substring(0, 150) + '...')
+      .map((r: any) => r.response_text?.substring(0, 150) + '...')
       .join('');
 
     insights.push({

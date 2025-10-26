@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store individual responses
-    let responses = [];
+    let responses: any[] = [];
     
     if (isMultiQuestion) {
       // Multi-question: create separate response records for each question

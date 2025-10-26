@@ -112,7 +112,7 @@ export default function NPSTrendsChart({ data, title, subtitle, className = "" }
               stroke="#94a3b8" 
               strokeDasharray="5 5" 
               strokeWidth={1}
-              label={{ value: "Avg", position: "topRight", style: { fontSize: 12, fill: "#94a3b8" } }}
+              label={{ value: "Avg", position: "top", style: { fontSize: 12, fill: "#94a3b8" } }}
             />
             
             {/* NPS Score Line */}

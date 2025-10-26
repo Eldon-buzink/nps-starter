@@ -65,7 +65,7 @@ async function getTitleTrends(title: string, params: {start?:string,end?:string,
     });
     
     // Convert to array and calculate NPS metrics
-    return Array.from(monthlyData.entries()).map(([period, data]) => {
+    const result = Array.from(monthlyData.entries()).map(([period, data]) => {
       const avgNPS = data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length;
       const promoters = data.scores.filter(score => score >= 9).length;
       const passives = data.scores.filter(score => score >= 7 && score <= 8).length;
