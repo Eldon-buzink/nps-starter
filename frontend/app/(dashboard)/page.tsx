@@ -667,48 +667,125 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               {/* Actionable Insights */}
               <div className="bg-green-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-green-900 mb-2">✅ Wat gaat goed?</h4>
-                {themes.promoterThemes.length > 0 && themes.promoterThemes[0].theme !== 'overige' ? (
-                  <p className="text-sm text-green-800">
-                    Promoters waarderen vooral <strong>{themes.promoterThemes[0].theme.replace('_', ' ')}</strong> ({themes.promoterThemes[0].share_pct?.toFixed(1)}%). 
-                    {themes.promoterThemes[1] && themes.promoterThemes[1].theme !== 'overige' && ` Ook ${themes.promoterThemes[1].theme.replace('_', ' ')} wordt positief genoemd (${themes.promoterThemes[1].share_pct?.toFixed(1)}%).`}
-                  </p>
-                ) : (
-                  <p className="text-sm text-green-800">Positieve feedback is verspreid over verschillende thema's. Focus op specifieke verbeteringen per thema.</p>
-                )}
+                {(() => {
+                  const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige');
+                  if (validPromoterThemes.length > 0) {
+                    const topTheme = validPromoterThemes[0];
+                    const secondTheme = validPromoterThemes[1];
+                    return (
+                      <div className="text-sm text-green-800">
+                        <p className="mb-2">
+                          <strong>{topTheme.theme.replace('_', ' ')}</strong> is het sterkste punt ({topTheme.share_pct?.toFixed(1)}% van promoters).
+                          {secondTheme && ` Ook ${secondTheme.theme.replace('_', ' ')} scoort goed (${secondTheme.share_pct?.toFixed(1)}%).`}
+                        </p>
+                        <p className="text-xs text-green-700">
+                          💡 <strong>Concrete actie:</strong> Versterk deze sterke punten en gebruik ze als voorbeelden voor andere gebieden.
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="text-sm text-green-800">
+                        <p className="mb-2">Geen dominante positieve thema's gevonden. Dit kan betekenen:</p>
+                        <ul className="text-xs text-green-700 space-y-1 ml-4">
+                          <li>• Feedback is te verspreid voor duidelijke patronen</li>
+                          <li>• Promoters geven algemene complimenten zonder specifieke thema's</li>
+                          <li>• Thema-classificatie heeft verbetering nodig</li>
+                        </ul>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
 
               <div className="bg-red-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-red-900 mb-2">⚠️ Verbeterpunten</h4>
-                {themes.detractorThemes.length > 0 && themes.detractorThemes[0].theme !== 'overige' ? (
-                  <p className="text-sm text-red-800">
-                    Detractors klagen vooral over <strong>{themes.detractorThemes[0].theme.replace('_', ' ')}</strong> ({themes.detractorThemes[0].share_pct?.toFixed(1)}%). 
-                    {themes.detractorThemes[1] && themes.detractorThemes[1].theme !== 'overige' && ` Ook ${themes.detractorThemes[1].theme.replace('_', ' ')} is een probleem (${themes.detractorThemes[1].share_pct?.toFixed(1)}%).`}
-                  </p>
-                ) : (
-                  <p className="text-sm text-red-800">Negatieve feedback is verspreid over verschillende thema's. Analyseer specifieke klachten per categorie.</p>
-                )}
+                {(() => {
+                  const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige');
+                  if (validDetractorThemes.length > 0) {
+                    const topTheme = validDetractorThemes[0];
+                    const secondTheme = validDetractorThemes[1];
+                    return (
+                      <div className="text-sm text-red-800">
+                        <p className="mb-2">
+                          <strong>{topTheme.theme.replace('_', ' ')}</strong> veroorzaakt de meeste ontevredenheid ({topTheme.share_pct?.toFixed(1)}% van detractors).
+                          {secondTheme && ` Ook ${secondTheme.theme.replace('_', ' ')} is problematisch (${secondTheme.share_pct?.toFixed(1)}%).`}
+                        </p>
+                        <p className="text-xs text-red-700">
+                          🚨 <strong>Prioriteit:</strong> Start met {topTheme.theme.replace('_', ' ')} - dit heeft de grootste impact op klanttevredenheid.
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="text-sm text-red-800">
+                        <p className="mb-2">Geen dominante negatieve thema's gevonden. Dit kan betekenen:</p>
+                        <ul className="text-xs text-red-700 space-y-1 ml-4">
+                          <li>• Klachten zijn te divers voor duidelijke patronen</li>
+                          <li>• Detractors geven algemene klachten zonder specifieke thema's</li>
+                          <li>• Thema-classificatie heeft verbetering nodig</li>
+                        </ul>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
 
               {/* Recommendations */}
               <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-yellow-900 mb-2">🎯 Aanbevelingen</h4>
-                <ul className="text-sm text-yellow-800 space-y-1">
-                  {themes.detractorThemes.length > 0 && themes.detractorThemes[0].theme !== 'overige' ? (
-                    <li>• <strong>Focus op {themes.detractorThemes[0].theme.replace('_', ' ')}</strong> - dit is de grootste bron van ontevredenheid</li>
-                  ) : (
-                    <li>• <strong>Analyseer specifieke klachten</strong> - bekijk individuele thema's voor gerichte verbeteringen</li>
-                  )}
-                  {themes.promoterThemes.length > 0 && themes.promoterThemes[0].theme !== 'overige' ? (
-                    <li>• <strong>Behoud {themes.promoterThemes[0].theme.replace('_', ' ')}</strong> - dit is wat promoters waarderen</li>
-                  ) : (
-                    <li>• <strong>Versterk positieve aspecten</strong> - identificeer wat promoters waarderen</li>
-                  )}
-                  <li>• <strong>Analyseer de trends</strong> om te zien welke titels verbeteren of verslechteren</li>
+                <h4 className="font-semibold text-yellow-900 mb-2">🎯 Concrete Aanbevelingen</h4>
+                <ul className="text-sm text-yellow-800 space-y-2">
+                  {(() => {
+                    const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige');
+                    const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige');
+                    
+                    const recommendations = [];
+                    
+                    if (validDetractorThemes.length > 0) {
+                      const topDetractor = validDetractorThemes[0];
+                      recommendations.push(
+                        <li key="detractor" className="flex items-start">
+                          <span className="text-red-600 mr-2">🔴</span>
+                          <div>
+                            <strong>Start met {topDetractor.theme.replace('_', ' ')}</strong> - dit veroorzaakt {topDetractor.share_pct?.toFixed(1)}% van alle klachten. 
+                            <span className="text-xs block mt-1">Bekijk specifieke klachten in het thema-overzicht voor gerichte acties.</span>
+                          </div>
+                        </li>
+                      );
+                    }
+                    
+                    if (validPromoterThemes.length > 0) {
+                      const topPromoter = validPromoterThemes[0];
+                      recommendations.push(
+                        <li key="promoter" className="flex items-start">
+                          <span className="text-green-600 mr-2">🟢</span>
+                          <div>
+                            <strong>Versterk {topPromoter.theme.replace('_', ' ')}</strong> - dit wordt door {topPromoter.share_pct?.toFixed(1)}% van promoters gewaardeerd.
+                            <span className="text-xs block mt-1">Gebruik dit als voorbeeld voor andere gebieden.</span>
+                          </div>
+                        </li>
+                      );
+                    }
+                    
+                    recommendations.push(
+                      <li key="trends" className="flex items-start">
+                        <span className="text-blue-600 mr-2">📈</span>
+                        <div>
+                          <strong>Monitor trends per titel</strong> - zie welke titels verbeteren of verslechteren.
+                          <span className="text-xs block mt-1">Gebruik de "Title Performance Changes" sectie voor maand-op-maand vergelijkingen.</span>
+                        </div>
+                      </li>
+                    );
+                    
+                    return recommendations;
+                  })()}
                 </ul>
               </div>
         </div>
         <p className="text-xs text-muted-foreground mt-4">
-          Hoe deze inzichten werken: De AI analyseert de opmerkingen en identificeert terugkerende thema's en sentimenten.
+          <strong>Hoe deze samenvatting werkt:</strong> De AI analyseert {coverage.total} reacties uit de periode {start} - {end}. 
+          Van deze reacties heeft {coverage.withComments}% een opmerking en {coverage.enriched}% is geclassificeerd met thema's en sentiment. 
+          De bovenstaande inzichten zijn gebaseerd op de {coverage.enriched}% geclassificeerde reacties.
         </p>
       </CardContent>
     </Card>
