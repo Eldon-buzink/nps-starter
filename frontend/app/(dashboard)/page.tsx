@@ -21,6 +21,81 @@ function getLastFullMonth() {
   };
 }
 
+// Helper function to get current and previous month periods
+function getMonthPeriods() {
+  const now = new Date();
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  
+  return {
+    current: {
+      start: currentMonth.toISOString().split('T')[0],
+      end: now.toISOString().split('T')[0]
+    },
+    previous: {
+      start: previousMonth.toISOString().split('T')[0],
+      end: previousMonthEnd.toISOString().split('T')[0]
+    }
+  };
+}
+
+// Calculate month-over-month changes
+async function getMonthOverMonthChanges() {
+  const periods = getMonthPeriods();
+  
+  try {
+    // Get current month data
+    const { data: currentData, error: currentError } = await supabase.rpc('v_nps_summary', {
+      p_start: periods.current.start,
+      p_end: periods.current.end,
+      p_survey: null,
+      p_title: null,
+    });
+    
+    // Get previous month data
+    const { data: previousData, error: previousError } = await supabase.rpc('v_nps_summary', {
+      p_start: periods.previous.start,
+      p_end: periods.previous.end,
+      p_survey: null,
+      p_title: null,
+    });
+    
+    if (currentError || previousError || !currentData?.[0] || !previousData?.[0]) {
+      return {
+        npsChange: 0,
+        responsesChange: 0,
+        promotersChange: 0,
+        detractorsChange: 0
+      };
+    }
+    
+    const current = currentData[0];
+    const previous = previousData[0];
+    
+    // Calculate percentage changes
+    const npsChange = previous.nps !== 0 ? ((current.nps - previous.nps) / Math.abs(previous.nps)) * 100 : 0;
+    const responsesChange = previous.responses !== 0 ? ((current.responses - previous.responses) / previous.responses) * 100 : 0;
+    const promotersChange = previous.promoters !== 0 ? ((current.promoters - previous.promoters) / previous.promoters) * 100 : 0;
+    const detractorsChange = previous.detractors !== 0 ? ((current.detractors - previous.detractors) / previous.detractors) * 100 : 0;
+    
+    return {
+      npsChange,
+      responsesChange,
+      promotersChange,
+      detractorsChange
+    };
+  } catch (error) {
+    console.error('Error calculating month-over-month changes:', error);
+    return {
+      npsChange: 0,
+      responsesChange: 0,
+      promotersChange: 0,
+      detractorsChange: 0
+    };
+  }
+}
+
 // Get KPIs from direct query (fallback if RPC doesn't exist)
 async function getKpis(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
@@ -238,17 +313,36 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   
   // Fetch all data in parallel
-  const [kpis, movers, themes, coverage] = await Promise.all([
+  const [kpis, movers, themes, coverage, momChanges] = await Promise.all([
     getKpis({ start, end, survey, title }),
     getMovers({ start, end, survey, title }),
     getTopThemes({ start, end, survey, title }),
-    getDataCoverage({ start, end, survey, title })
+    getDataCoverage({ start, end, survey, title }),
+    getMonthOverMonthChanges()
   ]);
   
   
 
   const getCategoryPercentage = (count: number, total: number) => 
     total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+
+  // Helper function to format month-over-month changes with color validation
+  const formatMoMChange = (change: number, isPositiveGood: boolean = true) => {
+    const sign = change >= 0 ? '+' : '';
+    const percentage = `${sign}${change.toFixed(1)}%`;
+    
+    // Determine color based on whether the change is good or bad
+    let colorClass = '';
+    if (change > 0) {
+      colorClass = isPositiveGood ? 'text-green-600' : 'text-red-600';
+    } else if (change < 0) {
+      colorClass = isPositiveGood ? 'text-red-600' : 'text-green-600';
+    } else {
+      colorClass = 'text-gray-500';
+    }
+    
+    return { percentage, colorClass };
+  };
 
   return (
     <div className="space-y-8">
@@ -270,35 +364,50 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">NPS Score</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                {momChanges.npsChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                )}
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis.current_nps?.toFixed(1) ?? '—'}</div>
-                <p className="text-xs text-muted-foreground">
-                  +2.1% from last month
+                <p className={`text-xs ${formatMoMChange(momChanges.npsChange, true).colorClass}`}>
+                  {formatMoMChange(momChanges.npsChange, true).percentage} from last month
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Responses</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                {momChanges.responsesChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                )}
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis.total_responses}</div>
-                <p className="text-xs text-muted-foreground">
-                  +15% from last month
+                <p className={`text-xs ${formatMoMChange(momChanges.responsesChange, true).colorClass}`}>
+                  {formatMoMChange(momChanges.responsesChange, true).percentage} from last month
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Promoters</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                {momChanges.promotersChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                )}
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis.promoters}</div>
-                <p className="text-xs text-muted-foreground">
+                <p className={`text-xs ${formatMoMChange(momChanges.promotersChange, true).colorClass}`}>
+                  {formatMoMChange(momChanges.promotersChange, true).percentage} from last month
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
                   {getCategoryPercentage(kpis.promoters, kpis.total_responses)}% of responses
                 </p>
               </CardContent>
@@ -306,11 +415,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Detractors</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                {momChanges.detractorsChange <= 0 ? (
+                  <TrendingDown className="h-4 w-4 text-green-600" />
+                ) : (
+                  <TrendingUp className="h-4 w-4 text-red-600" />
+                )}
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis.detractors}</div>
-                <p className="text-xs text-muted-foreground">
+                <p className={`text-xs ${formatMoMChange(momChanges.detractorsChange, false).colorClass}`}>
+                  {formatMoMChange(momChanges.detractorsChange, false).percentage} from last month
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
                   {getCategoryPercentage(kpis.detractors, kpis.total_responses)}% of responses
                 </p>
               </CardContent>
