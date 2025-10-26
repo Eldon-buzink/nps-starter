@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Heart, Github, Mail, Phone, MapPin, Calendar, BarChart3, Users, Settings } from 'lucide-react'
+import { Heart, Github, Mail, Phone, MapPin, Calendar, BarChart3, Users, Settings, Upload, FileText, Tag, MessageSquare } from 'lucide-react'
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
@@ -15,21 +15,14 @@ export function Footer() {
               <span className="text-xl font-bold text-gray-900">NPS Insights</span>
             </div>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Advanced Net Promoter Score analysis and customer feedback insights. 
-              Transform your customer feedback into actionable business intelligence.
+              Internal NPS analysis tool for customer feedback insights. 
+              Transform customer feedback into actionable business intelligence.
             </p>
             <div className="flex space-x-4">
               <a 
-                href="https://github.com" 
+                href="mailto:analytics@company.com" 
                 className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="GitHub"
-              >
-                <Github className="h-5 w-5" />
-              </a>
-              <a 
-                href="mailto:support@npsinsights.com" 
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="Email"
+                aria-label="Email Analytics Team"
               >
                 <Mail className="h-5 w-5" />
               </a>
@@ -47,21 +40,21 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/themes" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
+                <Link href="/titles" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
                   <Users className="h-4 w-4" />
-                  <span>Themes</span>
+                  <span>Title Explorer</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/themes" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
+                  <Tag className="h-4 w-4" />
+                  <span>Theme Explorer</span>
                 </Link>
               </li>
               <li>
                 <Link href="/responses" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Responses</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/trends" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Trends</span>
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Response Explorer</span>
                 </Link>
               </li>
             </ul>
@@ -72,31 +65,37 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Features</h3>
             <ul className="space-y-2">
               <li className="text-gray-600 text-sm">AI Theme Discovery</li>
-              <li className="text-gray-600 text-sm">Dynamic Normalization</li>
-              <li className="text-gray-600 text-sm">Trend Analysis</li>
+              <li className="text-gray-600 text-sm">Dynamic Theme Normalization</li>
+              <li className="text-gray-600 text-sm">NPS Trend Analysis</li>
               <li className="text-gray-600 text-sm">Sentiment Tracking</li>
               <li className="text-gray-600 text-sm">Promoter/Detractor Insights</li>
-              <li className="text-gray-600 text-sm">Real-time Dashboard</li>
+              <li className="text-gray-600 text-sm">Survey Analysis Tool</li>
             </ul>
           </div>
 
-          {/* Contact & Support */}
+          {/* Tools & Support */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Support</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Mail className="h-4 w-4 text-gray-400" />
-                <span>support@npsinsights.com</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <span>+1 (555) 123-4567</span>
-              </div>
-              <div className="flex items-start space-x-3 text-sm text-gray-600">
-                <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                <span>123 Business Ave<br />Suite 100<br />San Francisco, CA 94105</span>
-              </div>
-            </div>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Tools</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/settings/upload" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
+                  <Upload className="h-4 w-4" />
+                  <span>Data Upload</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/survey-analysis" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Survey Analysis</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/settings" className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center space-x-2">
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -105,7 +104,7 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <Calendar className="h-4 w-4" />
-              <span>© {currentYear} NPS Insights Tool. All rights reserved.</span>
+              <span>© {currentYear} Internal NPS Insights Tool. All rights reserved.</span>
             </div>
             
             <div className="flex items-center space-x-6 text-sm">
@@ -113,19 +112,14 @@ export function Footer() {
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
-              <a href="/privacy" className="text-gray-500 hover:text-gray-700 transition-colors">
-                Privacy Policy
-              </a>
-              <a href="/terms" className="text-gray-500 hover:text-gray-700 transition-colors">
-                Terms of Service
-              </a>
+              <span className="text-gray-500">Internal Use Only</span>
             </div>
           </div>
           
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
               <Heart className="h-3 w-3 text-red-500" />
-              <span>Made with passion for customer insights</span>
+              <span>Made for better customer insights</span>
             </div>
           </div>
         </div>
