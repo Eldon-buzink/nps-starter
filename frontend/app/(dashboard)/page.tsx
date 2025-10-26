@@ -14,10 +14,10 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
-  // Use full dataset for movers analysis (needs historical data)
+  // Use actual data range - all data is from 2025-09-23
   return {
-    start: "2024-01-01",
-    end: "2025-12-31"
+    start: "2025-09-01",
+    end: "2025-09-30"
   };
 }
 
@@ -123,8 +123,8 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
     let query = supabase
       .from('nps_response')
       .select('nps_score')
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2025-09-01')
+      .lte('created_at', params.end || '2025-09-30');
     
     if (params.survey) {
       query = query.eq('survey_name', params.survey);
@@ -261,15 +261,15 @@ async function getDataCoverage(params: {start?:string,end?:string,survey?:string
     const { data: totalData, error: totalError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2025-09-01')
+      .lte('created_at', params.end || '2025-09-30');
 
     const { data: commentsData, error: commentsError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
       .not('nps_explanation', 'is', null)
-      .gte('created_at', params.start || '2024-01-01')
-      .lte('created_at', params.end || '2025-12-31');
+      .gte('created_at', params.start || '2025-09-01')
+      .lte('created_at', params.end || '2025-09-30');
 
     const { data: enrichedData, error: enrichedError } = await supabase
       .from('nps_ai_enrichment')
