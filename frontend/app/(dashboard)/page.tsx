@@ -520,27 +520,33 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </CardDescription>
               </CardHeader>
             <CardContent>
-              {themes.promoterThemes.length > 0 ? (
-                <div className="space-y-3">
-                  {themes.promoterThemes.map((t, i) => (
-                    <Link 
-                      key={i} 
-                      href={`/themes/${encodeURIComponent(t.theme)}`}
-                      className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                          <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+              {(() => {
+                const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige');
+                return validPromoterThemes.length > 0 ? (
+                  <div className="space-y-3">
+                    {validPromoterThemes.map((t, i) => (
+                      <Link 
+                        key={i} 
+                        href={`/themes/${encodeURIComponent(t.theme)}`}
+                        className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                          </div>
+                          <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                         </div>
-                        <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No promoter themes identified.</p>
-              )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    <p className="mb-2">Geen specifieke promoter thema's gevonden.</p>
+                    <p className="text-xs">Positieve feedback is verspreid over verschillende categorieën of bevat algemene complimenten.</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
@@ -552,27 +558,33 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {themes.detractorThemes.length > 0 ? (
-                <div className="space-y-3">
-                  {themes.detractorThemes.map((t, i) => (
-                    <Link 
-                      key={i} 
-                      href={`/themes/${encodeURIComponent(t.theme)}`}
-                      className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                          <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+              {(() => {
+                const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige');
+                return validDetractorThemes.length > 0 ? (
+                  <div className="space-y-3">
+                    {validDetractorThemes.map((t, i) => (
+                      <Link 
+                        key={i} 
+                        href={`/themes/${encodeURIComponent(t.theme)}`}
+                        className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                          </div>
+                          <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                         </div>
-                        <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No detractor themes identified.</p>
-              )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    <p className="mb-2">Geen specifieke detractor thema's gevonden.</p>
+                    <p className="text-xs">Negatieve feedback is verspreid over verschillende categorieën of bevat algemene klachten.</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
