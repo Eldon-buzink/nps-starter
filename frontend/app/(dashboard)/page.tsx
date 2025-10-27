@@ -170,7 +170,7 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
       p_min_responses: 10, // Lower threshold for testing
-      p_top_k: 5
+      p_top_k: 3
     });
     
     console.log('RPC Response:', { data: rpcData, error: rpcError });
@@ -273,7 +273,7 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
       // Get sample quotes for each theme
       const promoterThemes = await Promise.all(
         promoters.map(async (theme: any) => {
-          // Get sample quote from v_theme_assignments_normalized joined with nps_response
+          // Get sample quotes from v_theme_assignments_normalized joined with nps_response
           const { data: quoteData } = await supabase
             .from('v_theme_assignments_normalized')
             .select('nps_response!inner(nps_explanation, nps_score)')
@@ -281,18 +281,20 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
             .gte('nps_response.nps_score', 9)
             .not('nps_response.nps_explanation', 'is', null)
             .neq('nps_response.nps_explanation', '')
-            .limit(1);
+            .limit(3);
+          
+          const sampleQuotes = quoteData?.map((item: any) => item.nps_response?.nps_explanation).filter(Boolean) || [];
           
           return {
             ...theme,
-            sample_quote: (quoteData?.[0] as any)?.nps_response?.nps_explanation || "Geen voorbeeld beschikbaar"
+            sample_quotes: sampleQuotes.length > 0 ? sampleQuotes : ["Geen voorbeeld beschikbaar"]
           };
         })
       );
 
       const detractorThemes = await Promise.all(
         detractors.map(async (theme: any) => {
-          // Get sample quote from v_theme_assignments_normalized joined with nps_response
+          // Get sample quotes from v_theme_assignments_normalized joined with nps_response
           const { data: quoteData } = await supabase
             .from('v_theme_assignments_normalized')
             .select('nps_response!inner(nps_explanation, nps_score)')
@@ -300,11 +302,13 @@ async function getTopThemes(params: {start?:string,end?:string,survey?:string|nu
             .lte('nps_response.nps_score', 6)
             .not('nps_response.nps_explanation', 'is', null)
             .neq('nps_response.nps_explanation', '')
-            .limit(1);
+            .limit(3);
+          
+          const sampleQuotes = quoteData?.map((item: any) => item.nps_response?.nps_explanation).filter(Boolean) || [];
           
           return {
             ...theme,
-            sample_quote: (quoteData?.[0] as any)?.nps_response?.nps_explanation || "Geen voorbeeld beschikbaar"
+            sample_quotes: sampleQuotes.length > 0 ? sampleQuotes : ["Geen voorbeeld beschikbaar"]
           };
         })
       );
@@ -326,15 +330,15 @@ async function getDataCoverage(params: {start?:string,end?:string,survey?:string
     const { data: totalData, error: totalError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
-      .gte('created_at', params.start || '2025-09-01')
-      .lte('created_at', params.end || '2025-09-30');
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
 
     const { data: commentsData, error: commentsError } = await supabase
       .from('nps_response')
       .select('count', { head: true, count: 'exact' })
       .not('nps_explanation', 'is', null)
-      .gte('created_at', params.start || '2025-09-01')
-      .lte('created_at', params.end || '2025-09-30');
+      .gte('creation_date', params.start || '2024-01-01')
+      .lte('creation_date', params.end || '2025-12-31');
 
     const { data: enrichedData, error: enrichedError } = await supabase
       .from('nps_ai_enrichment')
@@ -514,7 +518,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 // Split movers into improvers and decliners
-                const improvers = movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).slice(0, 5);
+                const improvers = movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).slice(0, 3);
                 return improvers.length > 0 ? (
                   <div className="space-y-3">
                     {improvers.map((m: any, i: number) => (
@@ -555,7 +559,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 // Split movers into improvers and decliners
-                const decliners = movers.filter((m: any) => m.delta < 0 || (m.delta === 0 && m.move === 'down')).slice(0, 5);
+                const decliners = movers.filter((m: any) => m.delta < 0 || (m.delta === 0 && m.move === 'down')).slice(0, 3);
                 return decliners.length > 0 ? (
                   <div className="space-y-3">
                     {decliners.map((m: any, i: number) => (
@@ -589,6 +593,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardContent>
           </Card>
           </div>
+          
+          {/* Link to Title Explorer */}
+          <div className="text-center mt-4">
+            <Link href="/titles">
+              <Button variant="outline" size="sm">
+                View All Titles & Performance Trends
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Theme Movers - Secondary Focus */}
@@ -617,7 +630,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar'}"</p>
                           </div>
                           <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                         </div>
@@ -655,7 +668,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quote}"</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar'}"</p>
                           </div>
                           <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
                         </div>
