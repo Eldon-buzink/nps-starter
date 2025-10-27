@@ -622,7 +622,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </CardHeader>
             <CardContent>
               {(() => {
-                const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige');
+                const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige').slice(0, 3);
+                console.log('Valid promoter themes:', validPromoterThemes.length, validPromoterThemes);
                 return validPromoterThemes.length > 0 ? (
                   <div className="space-y-3">
                     {validPromoterThemes.map((t, i) => (
@@ -660,7 +661,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardHeader>
             <CardContent>
               {(() => {
-                const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige');
+                const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige').slice(0, 3);
+                console.log('Valid detractor themes:', validDetractorThemes.length, validDetractorThemes);
                 return validDetractorThemes.length > 0 ? (
                   <div className="space-y-3">
                     {validDetractorThemes.map((t, i) => (
