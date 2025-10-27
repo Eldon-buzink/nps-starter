@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Users, MessageSquare, Target, AlertCircle, Tag } from "lucide-react";
 import Link from 'next/link';
+import { getThemeCategory, createThemeHierarchy } from '@/lib/theme-mapping';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -623,22 +624,38 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 console.log('All promoter themes:', themes.promoterThemes.length, themes.promoterThemes.slice(0, 5));
-                const validPromoterThemes = themes.promoterThemes.filter(t => t.theme !== 'overige').slice(0, 3);
-                console.log('Valid promoter themes (after filtering overige):', validPromoterThemes.length, validPromoterThemes);
-                return validPromoterThemes.length > 0 ? (
+                
+                // Create theme hierarchy using sub-themes
+                const promoterHierarchy = createThemeHierarchy(themes.promoterThemes.map(t => ({
+                  theme: t.theme,
+                  count: t.count_responses,
+                  avgNps: t.avg_nps,
+                  sentiment: t.avg_sentiment
+                })));
+                
+                // Get top 3 sub-themes (not main categories)
+                const topPromoterSubThemes = promoterHierarchy
+                  .filter(h => h.main !== 'Other') // Filter out "Other" main category
+                  .slice(0, 3);
+                
+                console.log('Top promoter sub-themes:', topPromoterSubThemes.length, topPromoterSubThemes);
+                
+                return topPromoterSubThemes.length > 0 ? (
                   <div className="space-y-3">
-                    {validPromoterThemes.map((t, i) => (
+                    {topPromoterSubThemes.map((h, i) => (
                       <Link 
                         key={i} 
-                        href={`/themes/${encodeURIComponent(t.theme)}`}
+                        href={`/themes/${encodeURIComponent(h.themes[0]?.name || h.sub)}`}
                         className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar'}"</p>
+                            <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">
+                              "{h.themes[0]?.name ? themes.promoterThemes.find(t => t.theme === h.themes[0].name)?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar' : 'Geen voorbeeld beschikbaar'}"
+                            </p>
                           </div>
-                          <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
+                          <Badge variant="secondary">{((h.count / themes.promoterThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
                         </div>
                       </Link>
                     ))}
@@ -663,22 +680,38 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 console.log('All detractor themes:', themes.detractorThemes.length, themes.detractorThemes.slice(0, 5));
-                const validDetractorThemes = themes.detractorThemes.filter(t => t.theme !== 'overige').slice(0, 3);
-                console.log('Valid detractor themes (after filtering overige):', validDetractorThemes.length, validDetractorThemes);
-                return validDetractorThemes.length > 0 ? (
+                
+                // Create theme hierarchy using sub-themes
+                const detractorHierarchy = createThemeHierarchy(themes.detractorThemes.map(t => ({
+                  theme: t.theme,
+                  count: t.count_responses,
+                  avgNps: t.avg_nps,
+                  sentiment: t.avg_sentiment
+                })));
+                
+                // Get top 3 sub-themes (not main categories)
+                const topDetractorSubThemes = detractorHierarchy
+                  .filter(h => h.main !== 'Other') // Filter out "Other" main category
+                  .slice(0, 3);
+                
+                console.log('Top detractor sub-themes:', topDetractorSubThemes.length, topDetractorSubThemes);
+                
+                return topDetractorSubThemes.length > 0 ? (
                   <div className="space-y-3">
-                    {validDetractorThemes.map((t, i) => (
+                    {topDetractorSubThemes.map((h, i) => (
                       <Link 
                         key={i} 
-                        href={`/themes/${encodeURIComponent(t.theme)}`}
+                        href={`/themes/${encodeURIComponent(h.themes[0]?.name || h.sub)}`}
                         className="block py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-medium capitalize text-black hover:text-gray-700">{t.theme.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground italic mt-1">"{t.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar'}"</p>
+                            <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
+                            <p className="text-sm text-muted-foreground italic mt-1">
+                              "{h.themes[0]?.name ? themes.detractorThemes.find(t => t.theme === h.themes[0].name)?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar' : 'Geen voorbeeld beschikbaar'}"
+                            </p>
                           </div>
-                          <Badge variant="secondary">{t.share_pct?.toFixed(1)}%</Badge>
+                          <Badge variant="secondary">{((h.count / themes.detractorThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
                         </div>
                       </Link>
                     ))}
