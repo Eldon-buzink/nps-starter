@@ -250,6 +250,14 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
 async function getTopThemes(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
     // Try RPC first
+    console.log('RPC parameters:', {
+      p_start_date: params.start ?? null,
+      p_end_date: params.end ?? null,
+      p_survey: params.survey ?? null,
+      p_title: params.title ?? null,
+      p_nps_bucket: 'promoter'
+    });
+    
     const [promoterData, detractorData] = await Promise.all([
       supabase.rpc('themes_aggregate', {
         p_start_date: params.start ?? null,
