@@ -518,7 +518,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 // Split movers into improvers and decliners
+                console.log('All movers data:', movers);
                 const improvers = movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).slice(0, 3);
+                console.log('Filtered improvers:', improvers);
                 return improvers.length > 0 ? (
                   <div className="space-y-3">
                     {improvers.map((m: any, i: number) => (
@@ -559,7 +561,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardContent>
               {(() => {
                 // Split movers into improvers and decliners
+                console.log('All movers data for decliners:', movers);
                 const decliners = movers.filter((m: any) => m.delta < 0 || (m.delta === 0 && m.move === 'down')).slice(0, 3);
+                console.log('Filtered decliners:', decliners);
                 return decliners.length > 0 ? (
                   <div className="space-y-3">
                     {decliners.map((m: any, i: number) => (
