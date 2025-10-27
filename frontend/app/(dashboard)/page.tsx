@@ -639,6 +639,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   .slice(0, 3);
                 
                 console.log('Top promoter sub-themes:', topPromoterSubThemes.length, topPromoterSubThemes);
+                console.log('Rendering promoter themes:', topPromoterSubThemes.map(h => h.sub));
                 
                 return topPromoterSubThemes.length > 0 ? (
                   <div className="space-y-3">
@@ -652,7 +653,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
                             <p className="text-sm text-muted-foreground italic mt-1">
-                              "Sample feedback available"
+                              "{(() => {
+                                const originalTheme = themes.promoterThemes.find(t => t.theme === h.themes[0]?.name);
+                                return originalTheme?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar';
+                              })()}"
                             </p>
                           </div>
                           <Badge variant="secondary">{((h.count / themes.promoterThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
@@ -695,6 +699,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   .slice(0, 3);
                 
                 console.log('Top detractor sub-themes:', topDetractorSubThemes.length, topDetractorSubThemes);
+                console.log('Rendering detractor themes:', topDetractorSubThemes.map(h => h.sub));
                 
                 return topDetractorSubThemes.length > 0 ? (
                   <div className="space-y-3">
@@ -708,7 +713,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
                             <p className="text-sm text-muted-foreground italic mt-1">
-                              "Sample feedback available"
+                              "{(() => {
+                                const originalTheme = themes.detractorThemes.find(t => t.theme === h.themes[0]?.name);
+                                return originalTheme?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar';
+                              })()}"
                             </p>
                           </div>
                           <Badge variant="secondary">{((h.count / themes.detractorThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
