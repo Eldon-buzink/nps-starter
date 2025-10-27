@@ -157,6 +157,14 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
 async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
     // Try RPC first
+    console.log('Calling top_title_mom_moves with params:', {
+      p_start_date: params.start ?? null,
+      p_end_date: params.end ?? null,
+      p_survey: params.survey ?? null,
+      p_min_responses: 10,
+      p_top_k: 5
+    });
+    
     const { data: rpcData, error: rpcError } = await supabase.rpc('top_title_mom_moves', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
@@ -164,6 +172,8 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_min_responses: 10, // Lower threshold for testing
       p_top_k: 5
     });
+    
+    console.log('RPC Response:', { data: rpcData, error: rpcError });
     
     if (!rpcError && rpcData && rpcData.length > 0) {
       console.log('MoM data found:', rpcData.length, 'records');
