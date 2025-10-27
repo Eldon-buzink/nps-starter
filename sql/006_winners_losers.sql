@@ -5,12 +5,12 @@
 -- Month-bucketed responses (Dutch-only dataset)
 create or replace view v_nps_monthly as
 select
-  date_trunc('month', created_at)::date as month,
+  date_trunc('month', creation_date)::date as month,
   title_text as title,
   survey_name as survey_type,
   nps_score
 from nps_response
-where created_at is not null;
+where creation_date is not null;
 
 -- 2. Ensure we have the required nps_trend_by_title_with_mom function
 -- (This function should already exist from sql/005_trends.sql, but including it here for completeness)

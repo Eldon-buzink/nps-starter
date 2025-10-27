@@ -166,6 +166,7 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
     });
     
     if (!rpcError && rpcData && rpcData.length > 0) {
+      console.log('MoM data found:', rpcData.length, 'records');
       // Transform RPC data to match expected format
       return rpcData.map((item: any) => ({
         title_text: item.title,
@@ -497,13 +498,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <CardHeader className="pb-3">
                 <CardTitle className="text-green-600">Biggest NPS Improvers</CardTitle>
                 <CardDescription>
-                  Top performing titles by NPS score
+                  Titles with the largest NPS increases this month
                 </CardDescription>
               </CardHeader>
             <CardContent>
               {(() => {
-                // In fallback mode: show top 5 performers as "improvers"
-                const improvers = movers.slice(0, 5);
+                // Split movers into improvers and decliners
+                const improvers = movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).slice(0, 5);
                 return improvers.length > 0 ? (
                   <div className="space-y-3">
                     {improvers.map((m: any, i: number) => (
@@ -538,13 +539,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <CardHeader className="pb-3">
               <CardTitle className="text-red-600">Biggest NPS Decliners</CardTitle>
                 <CardDescription>
-                  Lowest performing titles by NPS score
+                  Titles with the largest NPS decreases this month
                 </CardDescription>
             </CardHeader>
             <CardContent>
               {(() => {
-                // In fallback mode: show bottom 5 performers as "decliners"
-                const decliners = movers.slice(-5).reverse(); // Get last 5 and reverse to show worst first
+                // Split movers into improvers and decliners
+                const decliners = movers.filter((m: any) => m.delta < 0 || (m.delta === 0 && m.move === 'down')).slice(0, 5);
                 return decliners.length > 0 ? (
                   <div className="space-y-3">
                     {decliners.map((m: any, i: number) => (
