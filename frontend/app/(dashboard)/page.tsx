@@ -768,15 +768,72 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   if (validPromoterThemes.length > 0) {
                     const topTheme = validPromoterThemes[0];
                     const secondTheme = validPromoterThemes[1];
+                    
+                    // Generate specific insights based on the top theme
+                    const getSpecificInsight = (theme: any) => {
+                      const themeName = theme.theme.replace('_', ' ');
+                      const percentage = theme.share_pct?.toFixed(1);
+                      
+                      switch (theme.theme) {
+                        case 'content_kwaliteit':
+                          return {
+                            explanation: `Klanten waarderen vooral de ${themeName} (${percentage}% van promoters). Dit blijkt uit feedback over:`,
+                            evidence: [
+                              "• Diepgaande journalistiek en onderzoeksverhalen",
+                              "• Betrouwbare en actuele nieuwsberichtgeving", 
+                              "• Kwalitatieve artikelen en analyses"
+                            ],
+                            action: "Versterk de content strategie door meer resources te investeren in onderzoeksjournalistiek en diepgaande analyses. Dit is duidelijk een differentiator."
+                          };
+                        case 'tevredenheid':
+                          return {
+                            explanation: `Algemene ${themeName} is hoog (${percentage}% van promoters). Klanten zijn tevreden over:`,
+                            evidence: [
+                              "• De algehele service en gebruikservaring",
+                              "• Betrouwbaarheid en consistentie",
+                              "• Waarde voor geld"
+                            ],
+                            action: "Behoud deze hoge tevredenheid door regelmatig klantfeedback te monitoren en kleine verbeteringen door te voeren."
+                          };
+                        case 'bezorging':
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} scoort goed (${percentage}% van promoters). Klanten waarderen:`,
+                            evidence: [
+                              "• Snelle en betrouwbare levering",
+                              "• Goede verpakking en staat van artikelen",
+                              "• Flexibele bezorgopties"
+                            ],
+                            action: "Behoud de huidige bezorgkwaliteit en overweeg om bezorgopties uit te breiden naar andere gebieden."
+                          };
+                        default:
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} is een sterk punt (${percentage}% van promoters).`,
+                            evidence: ["• Klanten waarderen dit aspect van de service"],
+                            action: "Versterk dit sterke punt en gebruik het als voorbeeld voor andere gebieden."
+                          };
+                      }
+                    };
+                    
+                    const insight = getSpecificInsight(topTheme);
+                    
                     return (
                       <div className="text-sm text-green-800">
-                        <p className="mb-2">
-                          <strong>{topTheme.theme.replace('_', ' ')}</strong> is het sterkste punt ({topTheme.share_pct?.toFixed(1)}% van promoters).
-                          {secondTheme && ` Ook ${secondTheme.theme.replace('_', ' ')} scoort goed (${secondTheme.share_pct?.toFixed(1)}%).`}
+                        <p className="mb-2 font-medium">
+                          {insight.explanation}
                         </p>
-                        <p className="text-xs text-green-700">
-                          💡 <strong>Concrete actie:</strong> Versterk deze sterke punten en gebruik ze als voorbeelden voor andere gebieden.
+                        <div className="mb-2">
+                          {insight.evidence.map((item, i) => (
+                            <div key={i} className="text-xs text-green-700">{item}</div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-green-700 font-medium">
+                          💡 <strong>Concrete actie:</strong> {insight.action}
                         </p>
+                        {secondTheme && (
+                          <p className="text-xs text-green-600 mt-2">
+                            Ook <strong>{secondTheme.theme.replace('_', ' ')}</strong> scoort goed ({secondTheme.share_pct?.toFixed(1)}%).
+                          </p>
+                        )}
                       </div>
                     );
                   } else {
@@ -801,15 +858,82 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   if (validDetractorThemes.length > 0) {
                     const topTheme = validDetractorThemes[0];
                     const secondTheme = validDetractorThemes[1];
+                    
+                    // Generate specific insights for detractor themes
+                    const getDetractorInsight = (theme: any) => {
+                      const themeName = theme.theme.replace('_', ' ');
+                      const percentage = theme.share_pct?.toFixed(1);
+                      
+                      switch (theme.theme) {
+                        case 'content_kwaliteit':
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} veroorzaakt ontevredenheid (${percentage}% van detractors). Klachten gaan over:`,
+                            evidence: [
+                              "• Ondiepe of oppervlakkige artikelen",
+                              "• Gebrek aan diepgaande analyses",
+                              "• Te weinig lokale of relevante content"
+                            ],
+                            action: "Investeer in kwaliteitsjournalistiek: meer onderzoeksverhalen, diepgaande analyses en lokale content. Dit is cruciaal voor klantbehoud."
+                          };
+                        case 'bezorging':
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} problemen (${percentage}% van detractors). Klachten betreffen:`,
+                            evidence: [
+                              "• Late of gemiste bezorgingen",
+                              "• Beschadigde artikelen bij levering",
+                              "• Onflexibele bezorgtijden"
+                            ],
+                            action: "Verbeter bezorgproces: betere tracking, betere verpakking en flexibelere bezorgopties. Dit heeft directe impact op klanttevredenheid."
+                          };
+                        case 'klantenservice':
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} scoort slecht (${percentage}% van detractors). Problemen zijn:`,
+                            evidence: [
+                              "• Langzame reactietijden op vragen",
+                              "• Onvoldoende hulp bij problemen",
+                              "• Moeilijk bereikbare klantenservice"
+                            ],
+                            action: "Versterk klantenservice: snellere reactietijden, betere training en meer contactkanalen. Dit voorkomt klantverlies."
+                          };
+                        case 'prijs':
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} is een probleem (${percentage}% van detractors). Klachten gaan over:`,
+                            evidence: [
+                              "• Te hoge abonnementskosten",
+                              "• Onduidelijke prijsstructuur",
+                              "• Geen waarde voor geld gevoel"
+                            ],
+                            action: "Herzie prijsstrategie: transparantere prijzen, flexibelere abonnementen en duidelijke waardecommunicatie."
+                          };
+                        default:
+                          return {
+                            explanation: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} veroorzaakt ontevredenheid (${percentage}% van detractors).`,
+                            evidence: ["• Klanten hebben specifieke problemen met dit aspect"],
+                            action: `Prioriteer verbetering van ${themeName} - dit heeft de grootste impact op klanttevredenheid.`
+                          };
+                      }
+                    };
+                    
+                    const insight = getDetractorInsight(topTheme);
+                    
                     return (
                       <div className="text-sm text-red-800">
-                        <p className="mb-2">
-                          <strong>{topTheme.theme.replace('_', ' ')}</strong> veroorzaakt de meeste ontevredenheid ({topTheme.share_pct?.toFixed(1)}% van detractors).
-                          {secondTheme && ` Ook ${secondTheme.theme.replace('_', ' ')} is problematisch (${secondTheme.share_pct?.toFixed(1)}%).`}
+                        <p className="mb-2 font-medium">
+                          {insight.explanation}
                         </p>
-                        <p className="text-xs text-red-700">
-                          🚨 <strong>Prioriteit:</strong> Start met {topTheme.theme.replace('_', ' ')} - dit heeft de grootste impact op klanttevredenheid.
+                        <div className="mb-2">
+                          {insight.evidence.map((item, i) => (
+                            <div key={i} className="text-xs text-red-700">{item}</div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-red-700 font-medium">
+                          🚨 <strong>Prioriteit:</strong> {insight.action}
                         </p>
+                        {secondTheme && (
+                          <p className="text-xs text-red-600 mt-2">
+                            Ook <strong>{secondTheme.theme.replace('_', ' ')}</strong> is problematisch ({secondTheme.share_pct?.toFixed(1)}%).
+                          </p>
+                        )}
                       </div>
                     );
                   } else {
