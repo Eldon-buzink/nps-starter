@@ -14,10 +14,10 @@ const supabase = createClient(
 
 // Helper function to get last full calendar month
 function getLastFullMonth() {
-  // Use actual data range - all data is from 2025-09-23
+  // Use full data range to enable month-over-month calculations
   return {
-    start: "2025-09-01",
-    end: "2025-09-30"
+    start: "2024-01-01",
+    end: "2025-12-31"
   };
 }
 
@@ -179,11 +179,11 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       console.log('MoM data found:', rpcData.length, 'records');
       // Transform RPC data to match expected format
       return rpcData.map((item: any) => ({
-        title_text: item.title,
-        current_responses: item.responses,
-        current_nps: item.nps,
-        delta: item.mom_delta,
-        move: item.move
+        title_text: item.title_text,
+        current_responses: item.current_responses,
+        current_nps: item.current_nps,
+        delta: item.delta,
+        move: item.delta >= 0 ? 'up' : 'down'
       }));
     }
     
