@@ -170,7 +170,7 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
       p_min_responses: 10, // Lower threshold for testing
-      p_top_k: 3
+      p_top_k: 10 // Get more records to ensure we have enough for both sections
     });
     
     console.log('RPC Response:', { data: rpcData, error: rpcError });
