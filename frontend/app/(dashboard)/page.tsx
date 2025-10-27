@@ -633,9 +633,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   sentiment: t.avg_sentiment
                 })));
                 
-                // Get top 3 sub-themes (not main categories)
+                // Get top 3 sub-themes (include more categories to ensure we get 3)
                 const topPromoterSubThemes = promoterHierarchy
-                  .filter(h => h.main !== 'Other') // Filter out "Other" main category
+                  .filter(h => h.main !== 'Other') // Only filter out "Other" main category
                   .slice(0, 3);
                 
                 console.log('Top promoter sub-themes:', topPromoterSubThemes.length, topPromoterSubThemes);
@@ -693,9 +693,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   sentiment: t.avg_sentiment
                 })));
                 
-                // Get top 3 sub-themes (not main categories)
+                // Get top 3 sub-themes (include more categories to ensure we get 3)
                 const topDetractorSubThemes = detractorHierarchy
-                  .filter(h => h.main !== 'Other') // Filter out "Other" main category
+                  .filter(h => h.main !== 'Other') // Only filter out "Other" main category
                   .slice(0, 3);
                 
                 console.log('Top detractor sub-themes:', topDetractorSubThemes.length, topDetractorSubThemes);
