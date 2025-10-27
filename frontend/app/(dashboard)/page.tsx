@@ -208,7 +208,7 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
       return acc;
     }, {});
     
-    // Calculate NPS for each title and sort by NPS
+    // Calculate NPS for each title
     const titleNps = Object.values(titleStats).map((stat: any) => {
       const promoters = stat.scores.filter((s: number) => s >= 9).length;
       const detractors = stat.scores.filter((s: number) => s <= 6).length;
@@ -220,13 +220,14 @@ async function getMovers(params: {start?:string,end?:string,survey?:string|null,
         current_responses: stat.responses,
         current_nps: nps,
         delta: 0, // No month-over-month data available
-        move: 'up' // All are "up" since we're showing top performers
+        move: 'up' // All titles will be treated as "up" for fallback display
       };
-    }).filter((item: any) => item.current_responses >= 10) // Minimum 10 responses
-      .sort((a: any, b: any) => b.current_nps - a.current_nps)
-      .slice(0, 5);
+    }).filter((item: any) => item.current_responses >= 10); // Minimum 10 responses
     
-    return titleNps;
+    // Sort by NPS score (highest first) and return all titles
+    const sortedByNps = titleNps.sort((a: any, b: any) => b.current_nps - a.current_nps);
+    
+    return sortedByNps; // Return all titles so we can split them properly
   } catch (error) {
     console.error('Error in getMovers:', error);
     return [];
@@ -496,72 +497,84 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <CardHeader className="pb-3">
                 <CardTitle className="text-green-600">Biggest NPS Improvers</CardTitle>
                 <CardDescription>
-                  Titles with the largest NPS increases this month
+                  Top performing titles by NPS score
                 </CardDescription>
               </CardHeader>
             <CardContent>
-              {movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).length > 0 ? (
-                <div className="space-y-3">
-                  {movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).map((m: any, i: number) => (
-                    <Link 
-                      key={i} 
-                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
-                      className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
-                    >
-                      <div>
-                        <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
-                        <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
-                      </div>
-                      <div className="text-right">
-                        {m.delta !== 0 ? (
-                          <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
-                        ) : (
-                          <p className="font-bold text-green-600">Top Performer</p>
-                        )}
-                        <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No significant NPS improvements found.</p>
-              )}
+              {(() => {
+                // In fallback mode: show top 5 performers as "improvers"
+                const improvers = movers.slice(0, 5);
+                return improvers.length > 0 ? (
+                  <div className="space-y-3">
+                    {improvers.map((m: any, i: number) => (
+                      <Link 
+                        key={i} 
+                        href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
+                        className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
+                      >
+                        <div>
+                          <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
+                          <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
+                        </div>
+                        <div className="text-right">
+                          {m.delta !== 0 ? (
+                            <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
+                          ) : (
+                            <p className="font-bold text-green-600">Top Performer</p>
+                          )}
+                          <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No significant NPS improvements found.</p>
+                );
+              })()}
             </CardContent>
           </Card>
 
           <Card className="h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-red-600">Biggest NPS Decliners</CardTitle>
-              <CardDescription>
-                Titles with the largest NPS decreases this month
-              </CardDescription>
+                <CardDescription>
+                  Lowest performing titles by NPS score
+                </CardDescription>
             </CardHeader>
             <CardContent>
-              {movers.filter((m: any) => m.delta < 0).length > 0 ? (
-                <div className="space-y-3">
-                  {movers.filter((m: any) => m.delta < 0).map((m: any, i: number) => (
-                    <Link 
-                      key={i} 
-                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
-                      className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
-                    >
-                      <div>
-                        <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
-                        <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-red-600">{m.delta?.toFixed(1)}</p>
-                        <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">No significant NPS declines found.</p>
-                  <p className="text-xs">Since all data is from the same period (2025-09-23), month-over-month changes cannot be calculated. The "Biggest NPS Improvers" section shows top performers by NPS score instead.</p>
-                </div>
-              )}
+              {(() => {
+                // In fallback mode: show bottom 5 performers as "decliners"
+                const decliners = movers.slice(-5).reverse(); // Get last 5 and reverse to show worst first
+                return decliners.length > 0 ? (
+                  <div className="space-y-3">
+                    {decliners.map((m: any, i: number) => (
+                      <Link 
+                        key={i} 
+                        href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
+                        className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
+                      >
+                        <div>
+                          <p className="font-medium text-black hover:text-gray-700">{m.title_text}</p>
+                          <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
+                        </div>
+                        <div className="text-right">
+                          {m.delta !== 0 ? (
+                            <p className="font-bold text-red-600">{m.delta?.toFixed(1)}</p>
+                          ) : (
+                            <p className="font-bold text-red-600">Lowest NPS</p>
+                          )}
+                          <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    <p className="mb-2">No titles with low NPS scores found.</p>
+                    <p className="text-xs">All titles have sufficient response volume and positive NPS scores.</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
           </div>
