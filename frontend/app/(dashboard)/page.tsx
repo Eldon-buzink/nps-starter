@@ -652,7 +652,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
                             <p className="text-sm text-muted-foreground italic mt-1">
-                              "{h.themes[0]?.name ? themes.promoterThemes.find(t => t.theme === h.themes[0].name)?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar' : 'Geen voorbeeld beschikbaar'}"
+                              "Sample feedback available"
                             </p>
                           </div>
                           <Badge variant="secondary">{((h.count / themes.promoterThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
@@ -708,7 +708,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <div>
                             <p className="font-medium capitalize text-black hover:text-gray-700">{h.sub}</p>
                             <p className="text-sm text-muted-foreground italic mt-1">
-                              "{h.themes[0]?.name ? themes.detractorThemes.find(t => t.theme === h.themes[0].name)?.sample_quotes?.[0] || 'Geen voorbeeld beschikbaar' : 'Geen voorbeeld beschikbaar'}"
+                              "Sample feedback available"
                             </p>
                           </div>
                           <Badge variant="secondary">{((h.count / themes.detractorThemes.reduce((sum, t) => sum + t.count_responses, 0)) * 100).toFixed(1)}%</Badge>
