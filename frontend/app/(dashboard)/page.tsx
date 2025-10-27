@@ -689,6 +689,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </CardContent>
           </Card>
         </div>
+        
+        {/* View All Themes Link */}
+        <div className="flex justify-center mt-6">
+          <Link href="/themes">
+            <Button variant="outline" className="w-full max-w-md">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              View All Themes & Performance Trends
+            </Button>
+          </Link>
+        </div>
 
         {/* Quick Actions */}
         <div className="space-y-4">
