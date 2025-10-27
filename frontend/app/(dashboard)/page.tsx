@@ -626,12 +626,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 console.log('All promoter themes:', themes.promoterThemes.length, themes.promoterThemes.slice(0, 5));
                 
                 // Create theme hierarchy using sub-themes
+                console.log('Raw promoter themes for hierarchy:', themes.promoterThemes.slice(0, 3));
                 const promoterHierarchy = createThemeHierarchy(themes.promoterThemes.map(t => ({
                   theme: t.theme,
                   count: t.count_responses,
                   avgNps: t.avg_nps,
                   sentiment: t.avg_sentiment
                 })));
+                
+                console.log('Created promoter hierarchy:', promoterHierarchy.length, 'items');
+                console.log('First 5 promoter hierarchy items:', promoterHierarchy.slice(0, 5));
                 
                 // Get top 3 sub-themes (include more categories to ensure we get 3)
                 const topPromoterSubThemes = promoterHierarchy
@@ -686,12 +690,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 console.log('All detractor themes:', themes.detractorThemes.length, themes.detractorThemes.slice(0, 5));
                 
                 // Create theme hierarchy using sub-themes
+                console.log('Raw detractor themes for hierarchy:', themes.detractorThemes.slice(0, 3));
                 const detractorHierarchy = createThemeHierarchy(themes.detractorThemes.map(t => ({
                   theme: t.theme,
                   count: t.count_responses,
                   avgNps: t.avg_nps,
                   sentiment: t.avg_sentiment
                 })));
+                
+                console.log('Created detractor hierarchy:', detractorHierarchy.length, 'items');
+                console.log('First 5 detractor hierarchy items:', detractorHierarchy.slice(0, 5));
                 
                 // Get top 3 sub-themes (include more categories to ensure we get 3)
                 const topDetractorSubThemes = detractorHierarchy
