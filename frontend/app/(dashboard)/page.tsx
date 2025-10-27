@@ -156,24 +156,77 @@ async function getKpis(params: {start?:string,end?:string,survey?:string|null,ti
 // Get Movers from top_title_mom_moves (with fallback)
 async function getMovers(params: {start?:string,end?:string,survey?:string|null,title?:string|null}) {
   try {
-    
     // Try RPC first
     const { data: rpcData, error: rpcError } = await supabase.rpc('top_title_mom_moves', {
       p_start_date: params.start ?? null,
       p_end_date: params.end ?? null,
       p_survey: params.survey ?? null,
-      p_title: params.title ?? null,
-      p_min_responses: 30,
+      p_min_responses: 10, // Lower threshold for testing
       p_top_k: 5
     });
     
-    
-    if (!rpcError && rpcData) {
-      return rpcData;
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      // Transform RPC data to match expected format
+      return rpcData.map((item: any) => ({
+        title_text: item.title,
+        current_responses: item.responses,
+        current_nps: item.nps,
+        delta: item.mom_delta,
+        move: item.move
+      }));
     }
     
-    // Fallback: return empty array for now (would need complex month-over-month calculation)
-    return [];
+    // Fallback: Since we don't have month-over-month data, show top performers by NPS
+    console.log('No MoM data available, falling back to top performers by NPS');
+    
+    const { data: titleData, error: titleError } = await supabase
+      .from('nps_response')
+      .select(`
+        title_text,
+        nps_score
+      `)
+      .gte('created_at', params.start || '2025-09-01')
+      .lte('created_at', params.end || '2025-09-30')
+      .not('title_text', 'is', null);
+    
+    if (titleError || !titleData) {
+      return [];
+    }
+    
+    // Calculate NPS by title
+    const titleStats = titleData.reduce((acc: any, response: any) => {
+      const title = response.title_text;
+      if (!acc[title]) {
+        acc[title] = {
+          title_text: title,
+          scores: [],
+          responses: 0
+        };
+      }
+      acc[title].scores.push(response.nps_score);
+      acc[title].responses++;
+      return acc;
+    }, {});
+    
+    // Calculate NPS for each title and sort by NPS
+    const titleNps = Object.values(titleStats).map((stat: any) => {
+      const promoters = stat.scores.filter((s: number) => s >= 9).length;
+      const detractors = stat.scores.filter((s: number) => s <= 6).length;
+      const total = stat.responses;
+      const nps = total > 0 ? ((promoters - detractors) / total) * 100 : 0;
+      
+      return {
+        title_text: stat.title_text,
+        current_responses: stat.responses,
+        current_nps: nps,
+        delta: 0, // No month-over-month data available
+        move: 'up' // All are "up" since we're showing top performers
+      };
+    }).filter((item: any) => item.current_responses >= 10) // Minimum 10 responses
+      .sort((a: any, b: any) => b.current_nps - a.current_nps)
+      .slice(0, 5);
+    
+    return titleNps;
   } catch (error) {
     console.error('Error in getMovers:', error);
     return [];
@@ -447,12 +500,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </CardDescription>
               </CardHeader>
             <CardContent>
-              {movers.filter((m: any) => m.delta > 0).length > 0 ? (
+              {movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).length > 0 ? (
                 <div className="space-y-3">
-                  {movers.filter((m: any) => m.delta > 0).map((m: any, i: number) => (
+                  {movers.filter((m: any) => m.delta > 0 || (m.delta === 0 && m.move === 'up')).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2024-01-01&end=2025-12-31`}
+                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
@@ -460,7 +513,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         <p className="text-sm text-muted-foreground">{m.current_responses} responses</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
+                        {m.delta !== 0 ? (
+                          <p className="font-bold text-green-600">+{m.delta?.toFixed(1)}</p>
+                        ) : (
+                          <p className="font-bold text-green-600">Top Performer</p>
+                        )}
                         <p className="text-sm text-muted-foreground">{m.current_nps?.toFixed(1)} NPS</p>
                       </div>
                     </Link>
@@ -485,7 +542,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   {movers.filter((m: any) => m.delta < 0).map((m: any, i: number) => (
                     <Link 
                       key={i} 
-                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2024-01-01&end=2025-12-31`}
+                      href={`/titles?title=${encodeURIComponent(m.title_text)}&start=2025-09-01&end=2025-09-30`}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50 rounded p-2 -m-2"
                     >
                       <div>
@@ -500,7 +557,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No significant NPS declines found.</p>
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-2">No significant NPS declines found.</p>
+                  <p className="text-xs">Since all data is from the same period (2025-09-23), month-over-month changes cannot be calculated. The "Biggest NPS Improvers" section shows top performers by NPS score instead.</p>
+                </div>
               )}
             </CardContent>
           </Card>
