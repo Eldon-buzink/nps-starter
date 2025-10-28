@@ -66,9 +66,25 @@ export async function POST(request: NextRequest) {
       sentimentSum: number;
     }>();
 
-    for (const response of responses) {
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i];
       try {
-        console.log(`Processing response ${response.id}: ${response.response_text.substring(0, 50)}...`);
+        console.log(`Processing response ${i + 1}/${responses.length}: ${response.response_text.substring(0, 50)}...`);
+        
+        // Update progress in database
+        await supabase
+          .from('survey_analyses')
+          .update({ 
+            analysis_results: {
+              progress: {
+                processed: i,
+                total: responses.length,
+                percentage: Math.round((i / responses.length) * 100)
+              }
+            }
+          })
+          .eq('id', surveyId);
+        
         // Analyze with OpenAI
         const systemPrompt = survey.is_multi_question 
           ? `Analyze this survey response and extract:

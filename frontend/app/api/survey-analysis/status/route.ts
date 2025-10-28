@@ -44,7 +44,12 @@ export async function GET(request: NextRequest) {
 
     const processedCount = responses?.filter(r => r.sentiment_score !== null).length || 0;
     const totalCount = responses?.length || 0;
-    const progress = totalCount > 0 ? (processedCount / totalCount) * 100 : 0;
+    
+    // Use progress from analysis_results if available (during processing)
+    let progress = totalCount > 0 ? (processedCount / totalCount) * 100 : 0;
+    if (survey.status === 'processing' && survey.analysis_results?.progress) {
+      progress = survey.analysis_results.progress.percentage || 0;
+    }
 
     return NextResponse.json({
       survey: {
