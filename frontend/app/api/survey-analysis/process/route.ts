@@ -7,10 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(request: NextRequest) {
   try {
     const { surveyId } = await request.json();
@@ -18,6 +14,16 @@ export async function POST(request: NextRequest) {
     if (!surveyId) {
       return NextResponse.json({ error: 'Survey ID is required' }, { status: 400 });
     }
+
+    // Initialize OpenAI client inside the function
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY environment variable is missing');
+      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 });
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Get survey data
     const { data: survey, error: surveyError } = await supabase
