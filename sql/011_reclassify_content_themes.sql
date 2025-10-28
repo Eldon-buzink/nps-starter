@@ -7,30 +7,30 @@ SET themes = ARRAY['content_kwaliteit']
 WHERE 'overige' = ANY(themes)
 AND (
   -- Language and writing errors
-  LOWER(nps_explanation) LIKE '%taal%' 
-  OR LOWER(nps_explanation) LIKE '%schrijffout%'
-  OR LOWER(nps_explanation) LIKE '%spelling%'
-  OR LOWER(nps_explanation) LIKE '%grammatica%'
-  OR LOWER(nps_explanation) LIKE '%fout%'
+  LOWER(summary) LIKE '%taal%' 
+  OR LOWER(summary) LIKE '%schrijffout%'
+  OR LOWER(summary) LIKE '%spelling%'
+  OR LOWER(summary) LIKE '%grammatica%'
+  OR LOWER(summary) LIKE '%fout%'
   
   -- Content relevance
-  OR LOWER(nps_explanation) LIKE '%relevantie%'
-  OR LOWER(nps_explanation) LIKE '%relevant%'
-  OR LOWER(nps_explanation) LIKE '%inhoud%'
+  OR LOWER(summary) LIKE '%relevantie%'
+  OR LOWER(summary) LIKE '%relevant%'
+  OR LOWER(summary) LIKE '%inhoud%'
   
   -- Sensationalism
-  OR LOWER(nps_explanation) LIKE '%sensatie%'
-  OR LOWER(nps_explanation) LIKE '%dramatisch%'
-  OR LOWER(nps_explanation) LIKE '%drama%'
+  OR LOWER(summary) LIKE '%sensatie%'
+  OR LOWER(summary) LIKE '%dramatisch%'
+  OR LOWER(summary) LIKE '%drama%'
   
   -- General content quality terms
-  OR LOWER(nps_explanation) LIKE '%kwaliteit%'
-  OR LOWER(nps_explanation) LIKE '%artikel%'
-  OR LOWER(nps_explanation) LIKE '%verhaal%'
-  OR LOWER(nps_explanation) LIKE '%tekst%'
-  OR LOWER(nps_explanation) LIKE '%nieuws%'
-  OR LOWER(nps_explanation) LIKE '%redactie%'
-  OR LOWER(nps_explanation) LIKE '%journalistiek%'
+  OR LOWER(summary) LIKE '%kwaliteit%'
+  OR LOWER(summary) LIKE '%artikel%'
+  OR LOWER(summary) LIKE '%verhaal%'
+  OR LOWER(summary) LIKE '%tekst%'
+  OR LOWER(summary) LIKE '%nieuws%'
+  OR LOWER(summary) LIKE '%redactie%'
+  OR LOWER(summary) LIKE '%journalistiek%'
 );
 
 -- Show the results
