@@ -156,7 +156,6 @@ export const THEME_PATTERNS: Record<string, {main: string, sub: string}> = {
   'storing': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Technical Issues' },
   'uitval': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Downtime' },
   'bug': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Bugs' },
-  'fout': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Errors' },
   'crash': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Crashes' },
   'werkt': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Functionality' },
   'werkt niet': { main: MAIN_CATEGORIES.USER_EXPERIENCE, sub: 'Not Working' },
