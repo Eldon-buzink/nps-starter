@@ -3,8 +3,8 @@
 
 -- Update themes that are clearly content-related
 UPDATE nps_ai_enrichment 
-SET themes = 'content_kwaliteit'
-WHERE themes = 'overige' 
+SET themes = ARRAY['content_kwaliteit']
+WHERE 'overige' = ANY(themes)
 AND (
   -- Language and writing errors
   LOWER(nps_explanation) LIKE '%taal%' 
@@ -35,10 +35,10 @@ AND (
 
 -- Show the results
 SELECT 
-  'Before' as status,
-  themes,
+  'After' as status,
+  unnest(themes) as theme,
   COUNT(*) as count
 FROM nps_ai_enrichment 
-WHERE themes IN ('overige', 'content_kwaliteit')
-GROUP BY themes
-ORDER BY themes;
+WHERE 'overige' = ANY(themes) OR 'content_kwaliteit' = ANY(themes)
+GROUP BY unnest(themes)
+ORDER BY theme;
