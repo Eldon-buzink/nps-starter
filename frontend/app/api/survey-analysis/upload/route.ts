@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger AI analysis asynchronously
-    fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3008'}/api/survey-analysis/process`, {
+    fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/survey-analysis/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ surveyId })
