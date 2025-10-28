@@ -87,27 +87,42 @@ export async function POST(request: NextRequest) {
         
         // Analyze with OpenAI
         const systemPrompt = survey.is_multi_question 
-          ? `Analyze this survey response and extract:
+          ? `Analyze this survey response and extract meaningful insights:
+
 1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
-2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words.
+
+2. Main themes: Extract 2-3 meaningful themes that represent CONCRETE TOPICS, ISSUES, or CONCEPTS. 
+   - GOOD themes: "product quality", "customer service", "pricing", "delivery issues", "user experience", "feature requests"
+   - BAD themes: "good", "bad", "like", "think", "would", "more", "better", "team", "work", "time", "help", "need", "want"
+   - Focus on WHAT is being discussed, not HOW it's described
+   - Avoid generic words, pronouns, or filler words
+   - Use descriptive noun phrases that capture the actual subject matter
+
 3. Question context: This response is for the question "${response.question_text}". Consider this context when analyzing themes.
 
 Return JSON format:
 {
   "sentiment": "positive|negative|neutral",
   "sentiment_score": 0.8,
-  "themes": ["theme1", "theme2"],
+  "themes": ["concrete_theme1", "concrete_theme2"],
   "question_context": "${response.question_text}"
 }`
-          : `Analyze this survey response and extract:
+          : `Analyze this survey response and extract meaningful insights:
+
 1. Sentiment: Be decisive - if the response expresses satisfaction, praise, or positive emotions, classify as "positive". If it expresses dissatisfaction, complaints, or negative emotions, classify as "negative". Only use "neutral" for truly neutral statements.
-2. Main themes: Extract 2-3 key themes that represent the MAIN TOPICS or ISSUES discussed. Focus on the core subject matter, not descriptive words.
+
+2. Main themes: Extract 2-3 meaningful themes that represent CONCRETE TOPICS, ISSUES, or CONCEPTS.
+   - GOOD themes: "product quality", "customer service", "pricing", "delivery issues", "user experience", "feature requests"
+   - BAD themes: "good", "bad", "like", "think", "would", "more", "better", "team", "work", "time", "help", "need", "want"
+   - Focus on WHAT is being discussed, not HOW it's described
+   - Avoid generic words, pronouns, or filler words
+   - Use descriptive noun phrases that capture the actual subject matter
 
 Return JSON format:
 {
   "sentiment": "positive|negative|neutral",
   "sentiment_score": 0.8,
-  "themes": ["theme1", "theme2"]
+  "themes": ["concrete_theme1", "concrete_theme2"]
 }`;
 
         const completion = await openai.chat.completions.create({
@@ -563,14 +578,19 @@ async function generateQuestionInsights(questionText: string, questionResponses:
   const positiveCount = sentimentCounts.positive || 0;
   const negativeCount = sentimentCounts.negative || 0;
 
-  // Question summary insight
-  insights.push({
-    type: 'summary',
-    title: `Question Analysis: ${questionText}`,
-    content: `**Question:** ${questionText}\n\n**Response Summary:** ${totalResponses} responses (${positiveCount} positive, ${negativeCount} negative)\n\n**Key Themes:** ${Array.from(questionThemes.keys()).slice(0, 3).join(', ')}`,
-    themes: Array.from(questionThemes.keys()),
-    impact: 0.7
-  });
+  // Only add question summary if there are meaningful themes
+  if (questionThemes.size > 0) {
+    const topThemes = Array.from(questionThemes.keys()).slice(0, 3);
+    const sentimentRate = Math.round((positiveCount / totalResponses) * 100);
+    
+    insights.push({
+      type: 'summary',
+      title: `Question Analysis: ${questionText}`,
+      content: `**Question:** ${questionText}\n\n**Response Summary:** ${totalResponses} responses (${sentimentRate}% positive sentiment)\n\n**Key Themes:** ${topThemes.join(', ')}\n\n**Analysis:** ${sentimentRate >= 70 ? 'Overall positive feedback' : sentimentRate <= 30 ? 'Significant concerns identified' : 'Mixed feedback with both positive and negative aspects'}`,
+      themes: topThemes,
+      impact: 0.7
+    });
+  }
 
   // Top themes for this question
   const sortedThemes = Array.from(questionThemes.entries())
